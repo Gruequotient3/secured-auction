@@ -54,3 +54,80 @@ L'enchère se déroulera de la manière suivante :
 
 ## Protocole
 
+Générales :
+srv : ERROR 00 // Erreur serveur
+srv : ERROR 10 // commande invalide
+srv : ERROR 11 // argument invalide
+srv : ERROR 12 // Action non autorisée
+srv : ERROR 13 // Non identifié
+
+Identification :
+clt : AUTHN <pseudo> <motdepasse>
+
+srv : AUTHN <pseudo> OK
+srv : ERROR 20 // Authentification échouée
+srv : ERROR 21 // Compte déjà connecté
+
+Création de compte :
+clt : CREAT <pseudo> <motdepasse>
+
+srv : CREAT OK
+srv : ERROR 23 // Pseudo déjà utilisé
+srv : ERROR 24 // Mot de passe pas assez fort
+
+Créditer le compte :
+clt : CREDIT <montant>
+
+srv : CREDIT <montant>
+srv : ERROR 25 // Montant invalide
+
+Création d'une enchère :
+clt : NAUCT <titre> <prix_base> <temps_limite>
+
+srv : NAUCT <id_enchere> <titre> <prix_base> <temps_limite>
+srv : ERROR 30 // Temps incorrect
+srv : ERROR 31 // Prix incorrect
+srv : ERROR 32 // Titre incorrect (nb caractères, ...)
+
+Enchérir :
+clt : BDAUC (<id_compte>) <id_enchere> <montant>
+
+srv : BDAUC <id_enchere> <montant>
+srv : ERROR 33 // Id_enchere incorrect
+srv : ERROR 31 // Prix incorrect
+srv : ERROR 37 // Impossible d'enchérir
+srv : ERROR 26 // Crédit insuffisant
+
+Annulation d'enchérissement :
+clt : CNBID <id_enchere>
+
+srv : CNBID <id_enchere> <montant>
+srv : ERROR 33 // Id_enchere incorrect
+srv : ERROR 34 // Temps de désisitement écoulé
+srv : ERROR 35 // Enchérissement plus valide
+srv : ERROR 36 // Aucune mise
+
+Fin d'enchère :
+srv : EDAUC <id_enchere> <montant> (participant; si pas d'enchérisseur, renvoi 0 pour le montant)
+srv : WNAUC <id_enchere> <montant> (gagnant de l'enchère)
+
+Liste des enchères :
+clt : LSAUC
+
+srv : LSAUC [<id_enchere1>; <id_encheren>...] [<titre_enchere1>; <titre_encheren>...] [<id_img1>; <id_imgn>...]
+
+Rejoindre la page d'une enchère :
+clt : JNAUC <id_enchere>
+
+srv : JNAUC <nb_participant> <titre> <description> <montant> <temps> <image> (vient de rejoindre)
+srv : JNAUC <nb_participant> (participe déjà à l'enchère)
+srv : ERROR 33 // Id_enchere incorrect
+srv : ERROR 40 // Déjà présent sur une enchère
+
+Participant quitte l'enchère :
+clt : LVAUC
+
+srv : LVAUC <nb_participant>
+srv : ERROR 41 // N'est pas présent sur aucune enchère
+
+
