@@ -16,3 +16,8 @@ Auctions
 - backupPrice : Montant de l'avant dernière enchère pour le désistement / REAL
 - numberBets : Nombre d'enchère / INTEGER
 - backupUser : Id de l'avant dernier enchérisseur pour le désistement / INTEGER
+- sellerId : Id du vendeur / INT
+
+Auction_participants
+- auction_id : Id de l'enchère / INT
+- user_id : Id de l'utilisateur / INT
