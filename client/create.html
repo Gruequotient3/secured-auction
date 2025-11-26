@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Créer un compte</title>
+    <style>
+        :root { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; color-scheme: light; }
+        body { display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; background:#f3f4f6; }
+        .card { background:#fff; padding:2rem; border-radius:10px; box-shadow:0 6px 20px rgba(15,23,42,0.08); width:320px; }
+        h1 { margin:0 0 1rem 0; font-size:1.25rem; text-align:center; color:#0f172a; }
+        .field { margin-bottom:0.9rem; }
+        label { display:block; font-size:0.85rem; margin-bottom:0.3rem; color:#334155; }
+        input[type="text"], input[type="password"] {
+            width:100%; padding:0.6rem 0.7rem; border:1px solid #cbd5e1; border-radius:6px; font-size:0.95rem;
+            box-sizing:border-box;
+        
+        }
+        .field2 { margin-bottom:0.9rem; }
+        label { display:block; font-size:0.85rem; margin-bottom:0.3rem; color:#334155; }
+        input[type="text"], input[type="password"] {
+            width:100%; padding:0.6rem 0.7rem; border:1px solid #cbd5e1; border-radius:6px; font-size:0.95rem;
+            box-sizing:border-box;
+        }
+        .controls { display:flex; gap:0.5rem; align-items:center; }
+        .btn {
+            background:#d1ab12; color:white; border:none; padding:0.6rem 0.8rem; border-radius:6px; cursor:pointer;
+            font-weight:600; flex:1;display: inline-flex;align-items: center; justify-content: center;text-align: center;
+        }
+        .btn:active { transform:translateY(1px); }
+        .secondary { background:#e2e8f0; color:#0f172a; }
+        .error { color:#dc2626; font-size:0.82rem; margin-top:0.4rem; display:none; }
+        .show-pass { background:transparent; border:1px solid #cbd5e1; padding:0.45rem 0.6rem; border-radius:6px; cursor:pointer; } /* bouton afficher/masquer le mot de passe */
+    </style>
+</head>
+<body>
+    <main class="card" aria-labelledby="title">
+        <h1 id="title">Créer un compte</h1>
+
+         <img src="AS_logo.png" alt="logo" style="display:block; margin:0 auto 1rem auto; width:100px; height:auto;" />
+
+        <form id="loginForm" novalidate>
+            <div class="field">
+                <label for="pseudo">Pseudo</label>
+                <input id="pseudo" name="pseudo" type="text" placeholder="Entrez votre pseudo" minlength="3" maxlength="50" required autocomplete="username" />
+                <div class="error" id="pseudoError">Le pseudo doit contenir au moins 3 caractères.</div>
+            </div>
+
+            <div class="field">
+                <label for="password">Mot de passe</label>
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                    <input id="password" name="password" type="password" placeholder="Entrez votre mot de passe" minlength="6" required autocomplete="current-password" style="flex:1" />
+                    <!-- <button type="button" id="togglePass" class="show-pass" aria-pressed="false" title="Afficher / masquer le mot de passe">👁️</button> -->
+                </div>
+                <div class="error" id="passwordError">Le mot de passe doit contenir au moins 6 caractères.</div>
+            </div>
+
+            <div class="field2">
+                <label for="password2">Confirmer le mot de passe</label>
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                    <input id="password2" name="password2" type="password" placeholder="Confirmez votre mot de passe" minlength="6" required autocomplete="current-password" style="flex:1" />
+                   <!-- <button type="button" id="togglePass2" class="show-pass" aria-pressed="false" title="Afficher / masquer le mot de passe">👁️</button> -->
+                </div>
+                <div class="error" id="password2Error">Les mots de passe ne correspondent pas.</div>
+
+                <div class="field controls">
+                    <button class="btn" type="button" onclick="if (validateField() && validatePasswordMatch()) { window.location.href = 'index.html'; }">Créer le compte</button>
+                </div>
+
+            </div>
+
+
+
+        </form>
+    </main>
+    
+    <script>
+        const form = document.getElementById('loginForm');
+        const pseudo = document.getElementById('pseudo');
+        const password = document.getElementById('password');
+        const password2 = document.getElementById('password2');
+        const pseudoError = document.getElementById('pseudoError');
+        const passwordError = document.getElementById('passwordError');
+        const password2Error = document.getElementById('password2Error');
+        const toggle = document.getElementById('togglePass');
+
+        function validatePasswordMatch() {
+            if (password.value !== password2.value) {
+                document.getElementById('password2Error').style.display = 'block';
+                return false;
+            } else {
+                document.getElementById('password2Error').style.display = 'none';
+                return true;
+            }
+        }
+
+        function validateField() {
+            let ok = true;
+            if (pseudo.value.trim().length < 3) {
+                pseudoError.style.display = 'block'; ok = false;
+            } else { pseudoError.style.display = 'none'; }
+            if (password.value.length < 6) {
+                passwordError.style.display = 'block'; ok = false;
+            } else { passwordError.style.display = 'none'; }
+            return ok;
+        }
+
+        form.addEventListener('input', () => { validateField(); });
+    </script>
+</body>
+</html></div>
