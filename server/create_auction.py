@@ -1,7 +1,16 @@
-
+from fastapi import FastAPI, HTTPException
 import re
 import time
 
+def errorMessage(status_code: int, code: int, message: str):
+    raise HTTPException(
+        status_code = status_code,
+        detail = {
+            "status": "ERROR",
+            "code": code,
+            "message": message
+        }
+    )
 
 def check_title(title: str) -> bool:
     return (len(title) > 3 and re.fullmatch(r"[A-Za-zÀ-ÖØ-öø-ÿ0-9 ]*", title, flags=re.UNICODE) and len(title) < 15)
