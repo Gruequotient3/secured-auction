@@ -1,9 +1,11 @@
 from fastapi import FastAPI, HTTPException, Form, UploadFile, Depends, File
 from fastapi.security import HTTPBearer
 from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 import re
 import time
 import aiosqlite
+import os
 
 
 app = FastAPI(title="Secured Auction")
@@ -53,6 +55,42 @@ def check_timestamp(timestamp: int) -> bool:
 def check_price(price: float) -> bool:
     return (price >= 5.0)
 
+async def gen_id(db) -> int:
+    newId = 1
+    while(True):
+        sqlRequest = "select * FROM auctions WHERE id = ?"
+        cursor = await db.execute(sqlRequest, (newId, ))
+        id = await cursor.fetchone()
+        if not id:
+            return newId
+        newId += 1
+
+def saveImage(file: UploadFile, auctionId: int) -> str:
+    folder = f'auctionImages/{auctionId}/'
+    os.makedirs(folder, exist_ok=True)
+    imagePath = os.path.join(folder, 'image.jpg')
+    with open(imagePath, 'wb') as image:
+        image.write(file.file.read())
+    return imagePath
+
+
+async def addAuctionToDatabase(title: str, description: str, price: float, image: UploadFile, timestamp: int, userId: int):    
+    async with aiosqlite.connect(dbPath) as db:
+        newId = await gen_id(db)
+        imagePath = saveImage(image, newId)
+        now = int(time.time())
+        sqlRequest = "INSERT INTO auctions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        cursor = await db.execute(sqlRequest, (title, description, imagePath, newId, price, 0.0, 0, "", userId, now, timestamp))
+        await db.commit()
+        jsonResponse = {
+            "status": "NAUCT",
+            "auctionId": newId,
+            "title": title,
+            "initialPrice": price,
+            "endsAt": timestamp,
+        }
+        return JSONResponse(content=jsonable_encoder(jsonResponse))
+
 
 @app.post("/create-auction")
 async def create_auction(
@@ -74,3 +112,5 @@ async def create_auction(
 
     if not check_timestamp(timestamp):
         return errorMessage(400, 30, "Time is not ok")
+    
+    return await addAuctionToDatabase(title, description, price, image, timestamp, current_user)
