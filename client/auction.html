@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Auction - Enchères</title>
+    <style>
+        :root { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color-scheme: light; }
+        body { margin:0; padding:1rem; background:#f3f4f6; }
+        .container { max-width:900px; margin:0 auto; }
+        .header { text-align:center; margin-bottom:2rem; }
+        h1 { color:#0f172a; font-size:2rem; margin:0; }
+        .auction-card { background:#fff; border-radius:10px; box-shadow:0 6px 20px rgba(15,23,42,0.08); padding:2rem; display:grid; grid-template-columns:1fr 1fr; gap:2rem; }
+        .item-image { border-radius:8px; overflow:hidden; }
+        .item-image img { width:100%; height:auto; display:block; object-fit:cover; }
+        .item-details h2 { margin:0 0 1rem 0; color:#0f172a; }
+        .description { background:#f8fafc; padding:1rem; border-radius:6px; margin-bottom:1.5rem; color:#475569; line-height:1.6; }
+        .bid-section { margin-bottom:2rem; }
+        .bid-info { display:flex; justify-content:space-between; margin-bottom:1rem; }
+        .bid-info div { flex:1; }
+        .bid-label { font-size:0.85rem; color:#64748b; margin-bottom:0.3rem; }
+        .bid-value { font-size:1.5rem; font-weight:bold; color:#d1ab12; }
+        .bid-form { display:flex; gap:0.5rem; margin-bottom:1.5rem; }
+        input[type="number"] { flex:1; padding:0.7rem; border:1px solid #cbd5e1; border-radius:6px; font-size:0.95rem; }
+        .btn {
+            background:#d1ab12; color:white; border:none; padding:0.7rem 1.5rem; border-radius:6px; cursor:pointer;
+            font-weight:600; display:inline-flex; align-items:center; justify-content:center;
+        }
+        .btn:active { transform:translateY(1px); }
+        .btn:disabled { background:#cbd5e1; cursor:not-allowed; }
+        .history { margin-top:2rem; }
+        .history h3 { color:#0f172a; margin-bottom:1rem; }
+        .history-box { background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; height:300px; overflow-y:auto; padding:1rem; }
+        .history-item { padding:0.7rem; border-bottom:1px solid #e2e8f0; font-size:0.9rem; }
+        .history-item:last-child { border-bottom:none; }
+        .history-item.user { background:#d1ab12; color:white; border-radius:4px; margin-bottom:0.5rem; }
+        .history-item.other { color:#64748b; }
+        .error { color:#dc2626; font-size:0.85rem; margin-top:0.3rem; display:none; }
+        @media (max-width: 768px) {
+            .auction-card { grid-template-columns:1fr; }
+            .bid-info { flex-direction:column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏛️ Enchères en direct</h1>
+        </div>
+
+        <div class="auction-card">
+            <!-- Zone image + description -->
+            <div>
+                <div class="item-image">
+                    <img src="AS_logo.png" alt="Objet en vente" />
+                </div>
+                <div class="description">
+                    <strong>Logo de Auction Secured</strong><br><br>
+                    Ceci est un exemple d'objet que nous pouvons mettre aux enchères.
+                    Il s'agit d'un placeholder pour illustrer le fonctionnement de la plateforme d'enchères en ligne.
+                </div>
+            </div>
+
+            <!-- Zone enchères + historique -->
+            <div class="item-details">
+                <h2>Mise aux enchères</h2>
+
+                <div class="bid-section">
+                    <div class="bid-info">
+                        <div>
+                            <div class="bid-label">Enchère actuelle</div>
+                            <div class="bid-value" id="currentBid">150 €</div>
+                        </div>
+                        <div>
+                            <div class="bid-label">Enchérisseur</div>
+                            <div class="bid-value" style="color:#0f172a; font-size:1rem;" id="bidderName">Anonyme</div>
+                        </div>
+                    </div>
+
+                    <div class="bid-form">
+                        <input type="number" id="bidAmount" placeholder="Votre enchère (€)" min="150" step="1" />
+                        <button class="btn" id="bidBtn">Enchérir</button>
+                         <button class="btn secondary" id="cancelBtn" disabled>Annuler</button>
+                    </div>
+                    <div class="error" id="bidError">L'enchère doit être supérieure à l'enchère actuelle.</div>
+                
+                </div>
+
+                <div class="history">
+                    <h3>📋 Historique des enchères</h3>
+                    <div class="history-box" id="historyBox">
+                        <div class="history-item other">Enchère initiale : 150 € (Vendeur)</div>
+                    </div>
+                </div>
+
+                <div style="margin-top:1.5rem;">
+                    <a href="index.html" style="color:#d1ab12; text-decoration:none; font-weight:600;">← Retour à la page principal</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const bidAmount = document.getElementById('bidAmount');
+    const bidBtn = document.getElementById('bidBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const bidError = document.getElementById('bidError');
+    const currentBidEl = document.getElementById('currentBid');
+    const bidderNameEl = document.getElementById('bidderName');
+    const historyBox = document.getElementById('historyBox');
+
+    let currentBid = 150;
+    const bidHistory = [{ amount: 150, name: 'Vendeur', isUser: false }];
+
+    function updateMinBid() {
+        const minBid = currentBid + 5;
+        bidAmount.min = minBid;
+    }
+
+    function addHistoryElement(text, isUser = false) {
+        const item = document.createElement('div');
+        item.className = `history-item ${isUser ? 'user' : 'other'}`;
+        const time = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        item.textContent = `${time} - ${text}`;
+        historyBox.appendChild(item);
+        historyBox.scrollTop = historyBox.scrollHeight;
+    }
+
+    function updateBid(amount, name, isUser=false) {
+        currentBid = amount;
+        currentBidEl.textContent = `${amount} €`;
+        bidderNameEl.textContent = name;
+        updateMinBid();
+        // enable/disable cancel button selon règle (seulement si la meilleure enchère est de l'utilisateur)
+        refreshCancelButton();
+    }
+
+    function refreshCancelButton(){
+        // bouton activé uniquement si la dernière entrée d'historique est une enchère de l'utilisateur ET elle est la meilleure
+        const last = bidHistory[bidHistory.length - 1];
+        if (last && last.isUser && last.amount === currentBid) {
+            cancelBtn.disabled = false;
+        } else {
+            cancelBtn.disabled = true;
+        }
+    }
+
+    function recordBid(amount, name, isUser) {
+        bidHistory.push({ amount, name, isUser });
+        addHistoryElement(`${name} : ${amount} €`, isUser);
+        updateBid(amount, name, isUser);
+    }
+
+    // click Enchérir
+    bidBtn.addEventListener('click', () => {
+        const bid = parseFloat(bidAmount.value);
+        if (!bid || bid <= currentBid) {
+            bidError.style.display = 'block';
+            return;
+        }
+        bidError.style.display = 'none';
+        recordBid(bid, 'Vous', true);
+        bidAmount.value = '';
+        bidAmount.focus();
+
+        // simulation d'une surenchère automatique
+        setTimeout(() => {
+            const autoBid = bid + 10;
+            const names = ['Alice', 'Bob', 'Charles', 'Diana', 'Émile'];
+            const name = names[Math.floor(Math.random() * names.length)];
+            recordBid(autoBid, name, false);
+        }, 3000);
+    });
+
+    // click Annuler
+    cancelBtn.addEventListener('click', () => {
+        // on ne peut annuler que si la dernière enchère est bien une enchère de l'utilisateur ET elle est la meilleure
+        if (bidHistory.length <= 1) return; // rien à annuler
+        const last = bidHistory[bidHistory.length - 1];
+        if (!last.isUser || last.amount !== currentBid) {
+            // sécurité — désactiver bouton si état incohérent
+            refreshCancelButton();
+            return;
+        }
+        // retirer la dernière enchère utilisateur
+        bidHistory.pop();
+
+        // retrouver la nouvelle enchère courante (la dernière du tableau)
+        const prev = bidHistory[bidHistory.length - 1];
+        updateBid(prev.amount, prev.name, prev.isUser);
+
+        // ajouter une entrée d'historique annonçant l'annulation
+        addHistoryElement(`Vous avez annulé votre enchère de ${last.amount} €`, false);
+
+        // rafraîchir bouton
+        refreshCancelButton();
+    });
+
+    // appui sur Enter
+    bidAmount.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') bidBtn.click();
+    });
+
+    updateMinBid();
+    refreshCancelButton();
+</script>
+
+</body>
+</html>

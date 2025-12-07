@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Auction - Ajouter de l'argent</title>
+    <style>
+        :root { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color-scheme: light; }
+        body { display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; background:#f3f4f6; }
+        .card { background:#fff; padding:2rem; border-radius:10px; box-shadow:0 6px 20px rgba(15,23,42,0.08); width:320px; }
+        h1 { margin:0 0 1rem 0; font-size:1.25rem; text-align:center; color:#0f172a; }
+        .field { margin-bottom:0.9rem; }
+        label { display:block; font-size:0.85rem; margin-bottom:0.3rem; color:#334155; font-weight:500; }
+        input[type="password"], input[type="number"] {
+            width:100%; padding:0.6rem 0.7rem; border:1px solid #cbd5e1; border-radius:6px; font-size:0.95rem;
+            box-sizing:border-box;
+        }
+        .controls { display:flex; gap:0.5rem; }
+        .btn {
+            background:#d1ab12; color:white; border:none; padding:0.6rem 0.8rem; border-radius:6px; cursor:pointer;
+            font-weight:600; flex:1; display:inline-flex; align-items:center; justify-content:center; text-align:center;
+        }
+        .btn:active { transform:translateY(1px); }
+        .secondary { background:#e2e8f0; color:#0f172a; }
+        .error { color:red; font-size:0.82rem; margin-top:0.4rem; display:none; }
+        .show-pass { background:transparent; border:1px solid #cbd5e1; padding:0.45rem 0.6rem; border-radius:6px; cursor:pointer; }
+    </style>
+</head>
+<body>
+    <main class="card" aria-labelledby="title">
+        <h1 id="title">Ajouter de l'argent</h1>
+
+        <form id="addMoneyForm" novalidate>
+            <div class="field">
+                <label for="password">Mot de passe</label>
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                    <input id="password" name="password" type="password" placeholder="Entrez le mot de passe de votre compte" minlength="6" required autocomplete="current-password" style="flex:1" />
+                    <button type="button" id="togglePass" class="show-pass" aria-pressed="false" title="Afficher / masquer le mot de passe">👁️</button>
+                </div>
+                <div class="error" id="passwordError">Le mot de passe doit contenir au moins 6 caractères.</div>
+            </div>
+
+            <div class="field">
+                <label for="montant">Montant</label>
+                <input id="montant" name="montant" type="number" placeholder="Entrez le montant" min="0.01" step="0.01" required />
+                <div class="error" id="montantError">Le montant doit être supérieur à 0.</div>
+            </div>
+
+            <div class="field controls">
+                <button class="btn" type="submit">Ajouter</button>
+                <a class="btn secondary" href="login.html" role="button">Retour</a>
+            </div>
+        </form>
+    </main>
+    
+    <script>
+        const form = document.getElementById('addMoneyForm');
+        const password = document.getElementById('password');
+        const montant = document.getElementById('montant');
+        const passwordError = document.getElementById('passwordError');
+        const montantError = document.getElementById('montantError');
+        const toggle = document.getElementById('togglePass');
+
+        toggle.addEventListener('click', () => {
+            const isHidden = password.type === 'password';
+            password.type = isHidden ? 'text' : 'password';
+            toggle.setAttribute('aria-pressed', String(isHidden));
+            toggle.textContent = isHidden ? '🙈' : '👁️';
+        });
+
+        function validateField() {
+            let ok = true;
+            if (password.value.length < 6) {
+                passwordError.style.display = 'block';
+                ok = false;
+            } else {
+                passwordError.style.display = 'none';
+            }
+            if (parseFloat(montant.value) <= 0) {
+                montantError.style.display = 'block';
+                ok = false;
+            } else {
+                montantError.style.display = 'none';
+            }
+            return ok;
+        }
+
+
+        form.addEventListener('input', () => { validateField(); });
+    </script>
+</body>
+</html>
