@@ -69,18 +69,17 @@ async def login(User, Password):
             stored_password = result[0]
             return check_password(Password, stored_password)
 
-async def add_balance(User, Amount):
-    async with aiosqlite.connect(db_path) as conn:
-        await conn.execute("UPDATE userinfo SET balance = balance + ? WHERE pseudo = ?", (Amount, User))
-        await conn.commit()
-
 @app.post("/register")
 async def register_endpoint(
     pseudo: str = Form(...),
     password: str = Form(...)
 ):
     await register(pseudo, password)
-    return JSONResponse(content={"message": "User registered successfully"})
+    jsonResponse = {
+        "status": "CREAT",
+        "message": "OK",
+    }
+    return JSONResponse(content=jsonable_encoder(jsonResponse))
 
 @app.post("/login")
 async def login_endpoint(
@@ -89,14 +88,11 @@ async def login_endpoint(
 ):
     success = await login(pseudo, password)
     if success:
-        return JSONResponse(content={"message": "Login successful"})
+        jsonResponse = {
+            "status": "AUTHN",
+            "pseudo": pseudo,
+            "message": "OK",
+        }
+        return JSONResponse(content=jsonable_encoder(jsonResponse))
     else:
         errorMessage(401, 20, "Authentification échouée")
-
-@app.post("/balance")
-async def balance_endpoint(
-    pseudo: str = Form(...),
-    amount: float = Form(...)
-):
-    await add_balance(pseudo, amount)
-    return JSONResponse(content={"message": "Balance updated successfully"})
