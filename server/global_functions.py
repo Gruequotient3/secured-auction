@@ -13,15 +13,33 @@ def errorMessage(status_code: int, code: int, message: str):
     )
 
 def check_title(title: str) -> bool:
-    return (len(title) > 3 and re.fullmatch(r"[A-Za-zÀ-ÖØ-öø-ÿ0-9 ]*", title, flags=re.UNICODE) and len(title) < 15)
+    if(len(title) < 3):
+        return 1
+    if(len(title) > 15):
+        return 2
+    if not (re.fullmatch(r"[A-Za-zÀ-ÖØ-öø-ÿ0-9 ]*", title, flags=re.UNICODE)):
+        return 3
+    return 0
 
 def check_description(description: str) -> bool:
-    return (len(description) > 3 and re.fullmatch(r"[\w\s\-',.]*", description, flags=re.UNICODE) and len(description) < 80)
+    if(len(description) < 3):
+        return 1
+    if(len(description) > 80):
+        return 2
+    if not (re.fullmatch(r"[\w\s\-',.]*", description, flags=re.UNICODE)):
+        return 3
+    return 0
 
 def check_timestamp(timestamp: int) -> bool:
     now = int(time.time())
     duration = timestamp - now
-    return (duration >= 120 and duration <= 60*60*24 and timestamp >= now)
+    if(duration < 120):
+        return 1
+    if(duration > 60*24*24):
+        return 2
+    if(timestamp < now):
+        return 3
+    return 0
 
 def check_price(price: float) -> bool:
     return (price >= 5.0)
