@@ -1,8 +1,7 @@
-from fastapi import FastAPI, HTTPException, Form, UploadFile, Depends, File
+from fastapi import FastAPI, Form, UploadFile, Depends, File
 from fastapi.security import HTTPBearer
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
-import re
 import time
 import aiosqlite
 import os
