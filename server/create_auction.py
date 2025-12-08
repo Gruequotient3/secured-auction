@@ -17,12 +17,6 @@ dbPath = "database/database1.db"
 security = HTTPBearer(auto_error=False)
 
 
-async def get_user_by_token(token, db):
-    sqlRequest = "select * FROM userinfo WHERE sessionId = ?"
-    cursor = await db.execute(sqlRequest, (token, ))
-    userInfo = await cursor.fetchone()
-    return userInfo
-
 async def get_current_user(credentials = Depends(security)):
     if credentials is None:
         errorMessage(401, 13, "User not identified")
