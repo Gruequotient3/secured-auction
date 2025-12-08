@@ -3,6 +3,7 @@ import bcrypt
 from fastapi import FastAPI, HTTPException, Form
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
+from global_functions import *
 
 app = FastAPI()
 
@@ -29,19 +30,19 @@ async def gen_user_id():
 
 def validate_password(password):
     if len(password) < 6:
-        errorMessage(400, 24, "Le mot de passe doit faire au moins six caractères")
+        return errorMessage(400, 24, "Le mot de passe doit faire au moins six caractères")
     elif len(password) > 32:
-        errorMessage(400, 24, "Le mot de passe doit faire moins de trente deux caractères")
+        return errorMessage(400, 24, "Le mot de passe doit faire moins de trente deux caractères")
     else:
         return True
 
 async def validate_username(User):
     if len(User) < 3:
-        errorMessage(400, 11, "Le pseudo doit faire au moins trois caractères")
+        return errorMessage(400, 11, "Le pseudo doit faire au moins trois caractères")
     elif len(User) > 25:
-        errorMessage(400, 11, "Le pseudo doit faire moins de vingt cinq caractères")
+        return errorMessage(400, 11, "Le pseudo doit faire moins de vingt cinq caractères")
     if await user_exists(User):
-        errorMessage(400, 23, "Ce pseudo est déjà utilisé")
+        return errorMessage(400, 23, "Ce pseudo est déjà utilisé")
     return True
 
 async def user_exists(User):
@@ -72,16 +73,6 @@ async def add_balance(User, Amount):
     async with aiosqlite.connect(db_path) as conn:
         await conn.execute("UPDATE userinfo SET balance = balance + ? WHERE pseudo = ?", (Amount, User))
         await conn.commit()
-
-def errorMessage(status_code: int, code: int, message: str):
-    raise HTTPException(
-        status_code = status_code,
-        detail = {
-            "status": "ERROR",
-            "code": code,
-            "message": message
-        }
-    )
 
 @app.post("/register")
 async def register_endpoint(
