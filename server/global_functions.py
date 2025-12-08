@@ -35,7 +35,7 @@ def check_timestamp(timestamp: int) -> bool:
     duration = timestamp - now
     if(duration < 120):
         return 1
-    if(duration > 60*24*24):
+    if(duration > 60*60*24):
         return 2
     if(timestamp < now):
         return 3
