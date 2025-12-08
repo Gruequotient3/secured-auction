@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from routers import auth, add_balance, create_auction
+from server.routers import auth, add_balance, create_auction
 
 
 app = FastAPI()

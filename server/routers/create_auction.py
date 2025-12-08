@@ -6,7 +6,7 @@ import time
 import aiosqlite
 import os
 
-from global_functions import *
+from server.global_functions import *
 
 
 router = APIRouter(prefix="/create-auction", tags=["create-auction"])

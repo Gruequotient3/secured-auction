@@ -3,7 +3,7 @@ import bcrypt
 from fastapi import APIRouter, Depends, Form
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
-from global_functions import *
+from server.global_functions import *
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

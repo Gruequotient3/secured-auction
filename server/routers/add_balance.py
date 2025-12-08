@@ -1,7 +1,7 @@
 import aiosqlite
 from fastapi import APIRouter, Form
 from fastapi.responses import JSONResponse
-from global_functions import *
+from server.global_functions import *
 
 
 router = APIRouter(prefix="/balance", tags=["balance"])
