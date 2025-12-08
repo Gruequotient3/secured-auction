@@ -1,14 +1,62 @@
 <!DOCTYPE html>
 <html lang="fr">
-    <head>
-        <title>Enchère</title>
-        <meta charset="utf-8">
-        <link rel="stylesheet" href="style.css">
-        <script src="js/script.js"></script>
-    </head>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Recherche d'enchères</title>
+    <style>
+        * { box-sizing: border-box; }
+        a { text-decoration: none; }
+        nav {background-color: #fff;padding: 0 20px;border-radius: 40px;box-shadow: 0 10px 40px rgba(159, 162, 177, .8);display: flex;overflow: hidden;overflow-x: auto;position: relative;}
+        .nav-item {color: #83818c;font-family: arial, sans-serif;padding: 20px;margin: 0 6px;position: relative;}
+        .nav-item:before {content: "";position: absolute;bottom: -6px;background-color: #dfe2ea;height: 5px;width: 100%;border-radius: 8px 8px 0 0;left: 0;transition: .3s;}
+        .nav-item:not(.is-active):hover:before {bottom: 0;}
+        .nav-item:not(.is-active):hover {color: #333;}
+        .nav-indicator {position: absolute;left: 0;bottom: 0;height: 5px;transition: .4s;border-radius: 8px 8px 0 0;}
+    </style>
+</head>
 
-    <body>
-        <h1>Hello World !</h1>
-    </body>
+<body>
+    <nav>
+  <a href="login.html" class="nav-item" data-active-color="orange" data-target="Connexion">Connexion</a>
+  <a href="create.html" class="nav-item" data-active-color="green" data-target="Compte">Créer un compte</a>
+  <a href="bid.html" class="nav-item" data-active-color="blue" data-target="Argent">Votre Argent</a>
+<a href="auction.html" class="nav-item" data-active-color="red" data-target="Enchère">Créer Enchère</a> <!-- A modifié avec la page de création d'enchères-->
+  <span class="nav-indicator"></span>
+</nav>
+
+<script>
+    const indicator = document.querySelector('.nav-indicator');
+    const items = document.querySelectorAll('.nav-item');
+
+    function handleIndicator(el) {
+  // Boucler sur items -> retirer la classe "is-active"
+  items.forEach(item => {
+    item.classList.remove('is-active');
+    item.removeAttribute('style');
+  })
+  
+  const elementColor = el.dataset.activeColor;
+  const target = el.dataset.target;
+  
+  // Styliser l'indicateur
+  indicator.style.width = `${el.offsetWidth}px`;
+  indicator.style.backgroundColor = elementColor;
+  indicator.style.left = `${el.offsetLeft}px`;
+  
+  // Ajout la classe is-active
+  el.classList.add('is-active');
+  el.style.color = elementColor;
+}
+
+    items.forEach((item, index) => {
+    item.addEventListener('click', e => {
+        handleIndicator(e.target)
+    });
+    item.classList.contains('is-active') && handleIndicator(item);
+});
+</script>
+
+</body>
     
 </html>
