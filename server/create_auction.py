@@ -18,12 +18,12 @@ security = HTTPBearer(auto_error=False)
 
 async def get_current_user(credentials = Depends(security)):
     if credentials is None:
-        errorMessage(401, 13, "User not identified")
+        errorMessage(401, 13, "L'utilisateur n'est pas authentifié")
     token = credentials.credentials
     async with aiosqlite.connect(dbPath) as db: 
         user = await get_user_by_token(token, db)
         if not user:
-            errorMessage(401, 13, "User not identified")
+            errorMessage(401, 13, "L'utilisateur n'est pas authentifié")
         return user[3]
 
 async def gen_id(db) -> int:
@@ -72,16 +72,34 @@ async def create_auction(
     image: UploadFile = File(...),
     current_user = Depends(get_current_user)
 ) :
-    if not check_title(title):
-        return errorMessage(400, 32, "Title is not ok")
-
-    if not check_description(description):
-        return errorMessage(400, 38, "Description is not ok")
+    titleResult = check_title(title)
+    if(titleResult != 0):
+        if(titleResult == 1):
+            return errorMessage(400, 32, "Le titre est trop court")
+        if(titleResult == 2):
+            return errorMessage(400, 32, "Le titre est trop long")
+        if(titleResult == 3):
+            return errorMessage(400, 32, "Le titre contient des caractères non acceptés")
+        
+    descriptionResult = check_description(description)
+    if(descriptionResult != 0):
+        if(descriptionResult == 1):
+            return errorMessage(400, 38, "La description est trop courte")
+        if(descriptionResult == 2):
+            return errorMessage(400, 38, "La description est trop longue")
+        if(descriptionResult == 3):
+            return errorMessage(400, 38, "La description contient des caractères non acceptés")
 
     if not check_price(price):
-        return errorMessage(400, 31, "Price is not ok")
+        return errorMessage(400, 31, "Le prix doit être au moins 5.00 euros")
 
-    if not check_timestamp(timestamp):
-        return errorMessage(400, 30, "Time is not ok")
+    timestampResult = check_timestamp(timestamp)
+    if(timestampResult != 0):
+        if(timestampResult == 1):
+            return errorMessage(400, 30, "La durée doit être au moins 2 minutes")
+        if(timestampResult == 2):
+            return errorMessage(400, 30, "La durée doit être inférieur à 24 heures")
+        if(timestampResult == 3):
+            return errorMessage(400, 30, "La durée n'est pas correcte")
     
     return await addAuctionToDatabase(title, description, price, image, timestamp, current_user)
