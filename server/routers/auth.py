@@ -1,11 +1,11 @@
 import aiosqlite
 import bcrypt
-from fastapi import FastAPI, HTTPException, Form
+from fastapi import APIRouter, Depends, Form
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from global_functions import *
 
-app = FastAPI()
+router = APIRouter(prefix="/auth", tags=["auth"])
 
 db_path = 'database/database1.db'
 
@@ -69,7 +69,7 @@ async def login(User, Password):
             stored_password = result[0]
             return check_password(Password, stored_password)
 
-@app.post("/register")
+@router.post("/register")
 async def register_endpoint(
     pseudo: str = Form(...),
     password: str = Form(...)
@@ -81,7 +81,7 @@ async def register_endpoint(
     }
     return JSONResponse(content=jsonable_encoder(jsonResponse))
 
-@app.post("/login")
+@router.post("/login")
 async def login_endpoint(
     pseudo: str = Form(...),
     password: str = Form(...)

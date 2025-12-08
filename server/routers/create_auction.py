@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Form, UploadFile, Depends, File
+from fastapi import APIRouter, Form, UploadFile, Depends, File
 from fastapi.security import HTTPBearer
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
@@ -9,7 +9,7 @@ import os
 from global_functions import *
 
 
-app = FastAPI(title="Secured Auction")
+router = APIRouter(prefix="/create-auction", tags=["create-auction"])
 
 dbPath = "database/database1.db"
 
@@ -63,7 +63,7 @@ async def addAuctionToDatabase(title: str, description: str, price: float, image
         return JSONResponse(content=jsonable_encoder(jsonResponse))
 
 
-@app.post("/create-auction")
+@router.post("/create-auction")
 async def create_auction(
     title: str = Form(...),
     description: str = Form(...),

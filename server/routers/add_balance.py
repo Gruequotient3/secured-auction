@@ -1,10 +1,10 @@
 import aiosqlite
-from fastapi import FastAPI, Form
+from fastapi import APIRouter, Form
 from fastapi.responses import JSONResponse
 from global_functions import *
 
 
-app = FastAPI()
+router = APIRouter(prefix="/balance", tags=["balance"])
 
 db_path = 'database/database1.db'
 
@@ -18,7 +18,7 @@ async def add_balance(User, Amount):
         await conn.execute("UPDATE userinfo SET balance = balance + ? WHERE pseudo = ?", (Amount, User))
         await conn.commit()
 
-@app.post("/balance")
+@router.post("/balance")
 async def balance_endpoint(
     pseudo: str = Form(...),
     amount: float = Form(...)
