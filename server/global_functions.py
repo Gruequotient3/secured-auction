@@ -1,4 +1,6 @@
-
+from fastapi import HTTPException
+import time
+import re
 
 def errorMessage(status_code: int, code: int, message: str):
     raise HTTPException(
@@ -23,3 +25,10 @@ def check_timestamp(timestamp: int) -> bool:
 
 def check_price(price: float) -> bool:
     return (price >= 5.0)
+
+
+async def get_user_by_token(token, db):
+    sqlRequest = "select * FROM userinfo WHERE sessionId = ?"
+    cursor = await db.execute(sqlRequest, (token, ))
+    userInfo = await cursor.fetchone()
+    return userInfo
