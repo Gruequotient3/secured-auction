@@ -49,6 +49,7 @@ from schemas.images import (
 from services.bids import Bid
 from services.auction import Auction
 from services.images import Image
+from services.users import Users
 
 # Common
 from common.utils import (
@@ -56,7 +57,8 @@ from common.utils import (
     check_title, 
     errorMessage, 
     check_timestamp,
-    check_description, 
+    check_description,
+    check_balance,
 )
 
 auction_router = APIRouter()
@@ -259,3 +261,17 @@ async def cancel_bid(
         errorMessage(404, 43, "Bid not found")
 
     return {"status": "OK", "deleted": True, "bid_id": data.id}
+
+
+@auction_router.post(
+    "/balance",
+    summary="Add credit to account",
+)
+async def balance_endpoint(
+    current_user_id = Depends(get_current_user),
+    amount: float = Form(...),
+):
+    if not check_balance(amount):
+        return errorMessage(400, 25, "Le montant n'est pas correcte")
+    await Users.add_balance(current_user_id, amount)
+    return JSONResponse(content={"message": "Le montant a bien été crédité"})
