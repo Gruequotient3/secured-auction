@@ -2,7 +2,7 @@ from typing import Optional
 from pydantic import BaseModel
 
 
-class UserSchema(BaseModoel):
+class UserSchema(BaseModel):
     id: str
     username: str
     balance: float
@@ -10,23 +10,23 @@ class UserSchema(BaseModoel):
     created_at: int
 
 
-class CreateUserSchema(BaseModoel):
+class CreateUserSchema(BaseModel):
     username: str
     password: str
     public_key: Optional[str]
 
 
-class EditUserSchema(BaseModoel):
+class EditUserSchema(BaseModel):
     id: str
     username: str
     public_key: Optional[str]
     balance: float
 
 
-class GetDeleteUserSchema(BaseModoel):
+class GetDeleteUserSchema(BaseModel):
     id: str
 
 
-class PublicUserSchema(BaseModoel):
+class PublicUserSchema(BaseModel):
     id: str
     username: str
