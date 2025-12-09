@@ -5,11 +5,12 @@ from fastapi import APIRouter, Form
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 import aiosqlite
+import json
 
 # Internals
 from common.utils import errorMessage
 from common.encrypted import hash_password, check_password, create_access_token
-from config.config import DB_PATH, SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
+from config.config import DB_PATH, RSA_KEYS_PATH, SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -56,6 +57,20 @@ async def login_endpoint(
             {
                 "access_token": access_token,
                 "token_type": "bearer",
+            }
+        )
+    )
+
+@router.get("/public-key")
+async def publickey_endpoint():
+    json_data = open(RSA_KEYS_PATH)
+    keys = json.load(json_data)
+
+    return JSONResponse(
+        content=jsonable_encoder(
+            {
+                "e": int(keys["e"]),
+                "n": int(keys["n"])
             }
         )
     )
