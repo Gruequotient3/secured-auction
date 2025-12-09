@@ -1,6 +1,9 @@
 import jwt
 import bcrypt
+import json
 from datetime import datetime, timedelta
+from Crypto.PublicKey import RSA
+from Crypto.Util.number import bytes_to_long, long_to_bytes
 
 # Internals
 from config.config import (
@@ -8,6 +11,19 @@ from config.config import (
     SECRET_KEY,
     ACCESS_TOKEN_EXPIRE_MINUTES,
 )
+
+
+def rsa_encrypt(message, publicKey):
+    m = bytes_to_long(message.encode("utf-8"))
+    if m >= publicKey["n"]:
+        raise ValueError("Message trop grand pour la clé RSA")
+    c = pow(m, publicKey["e"], publicKey["n"])
+    return c
+
+
+def rsa_decrypt(cipher, privateKey):
+    m = pow(cipher, privateKey["d"], privateKey["n"])
+    return long_to_bytes(m).decode("utf-8")
 
 
 def hash_password(password):
