@@ -8,9 +8,10 @@ import aiosqlite
 import json
 
 # Internals
-from common.utils import errorMessage
+from common.utils import errorMessage, validate_password, validate_username
 from common.encrypted import rsa_decrypt, rsa_encrypt, public_server_key, private_server_key, hash_password, check_password, create_access_token
 from config.config import DB_PATH, SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
+from services.users import Users
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -19,16 +20,20 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 async def register_endpoint(
     username: str = Form(...),
     password: str = Form(...),
+    public_key: str = Form(...),
 ):
     private_key = private_server_key()
     username_decrypted = rsa_decrypt(username, private_key)
     password_decrypted = rsa_decrypt(password, private_key)
     password_hash = hash_password(password_decrypted)
 
+    validate_password(password_decrypted)
+    await validate_username(username_decrypted)
+
     async with aiosqlite.connect(DB_PATH) as conn:
         await conn.execute(
-            "INSERT INTO UserInfo (username, password_hash, balance, created_at) VALUES (?, ?, 0, ?)",
-            (username_decrypted, password_hash, datetime.utcnow().timestamp()),
+            "INSERT INTO UserInfo (username, password_hash, balance, created_at, public_key) VALUES (?, ?, 0, ?, ?)",
+            (username_decrypted, password_hash, datetime.utcnow().timestamp(), public_key),
         )
         await conn.commit()
 
@@ -68,7 +73,10 @@ async def login_endpoint(
 
     return JSONResponse(
         content=jsonable_encoder(
-            {
+            {   
+                "status": "AUTHN",
+                "pseudo": username_decrypted,
+                "message": "OK",
                 "access_token": access_token,
                 "token_type": "bearer",
             }
