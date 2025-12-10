@@ -20,7 +20,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 async def register_endpoint(
     username: str = Form(...),
     password: str = Form(...),
-    public_key: str = Form(...),
+    public_key_e: str = Form(...),
+    public_key_n: str = Form(...),
 ):
     private_key = private_server_key()
     username_decrypted = rsa_decrypt(username, private_key)
@@ -32,8 +33,8 @@ async def register_endpoint(
 
     async with aiosqlite.connect(DB_PATH) as conn:
         await conn.execute(
-            "INSERT INTO UserInfo (username, password_hash, balance, created_at, public_key) VALUES (?, ?, 0, ?, ?)",
-            (username_decrypted, password_hash, datetime.utcnow().timestamp(), public_key),
+            "INSERT INTO UserInfo (username, password_hash, balance, created_at, public_key_e, public_key_n) VALUES (?, ?, 0, ?, ?, ?)",
+            (username_decrypted, password_hash, datetime.utcnow().timestamp(), public_key_e, public_key_n),
         )
         await conn.commit()
 
