@@ -23,9 +23,14 @@ async def register_endpoint(
     public_key_e: str = Form(...),
     public_key_n: str = Form(...),
 ):
+
+    format_Username = int(username[1:])
+    format_Password = int(password[1:])
     private_key = private_server_key()
-    username_decrypted = rsa_decrypt(username, private_key)
-    password_decrypted = rsa_decrypt(password, private_key)
+    username_decrypted = rsa_decrypt(format_Username, private_key)
+    if username_decrypted == None:
+        return errorMessage(400, 11, "Argument invalide")
+    password_decrypted = rsa_decrypt(format_Password, private_key)
     password_hash = hash_password(password_decrypted)
 
     validate_password(password_decrypted)
@@ -34,7 +39,7 @@ async def register_endpoint(
     async with aiosqlite.connect(DB_PATH) as conn:
         await conn.execute(
             "INSERT INTO UserInfo (username, password_hash, balance, created_at, public_key_e, public_key_n) VALUES (?, ?, 0, ?, ?, ?)",
-            (username_decrypted, password_hash, datetime.utcnow().timestamp(), public_key_e, public_key_n),
+            (username_decrypted, password_hash, datetime.utcnow().timestamp(), str(public_key_e), str(public_key_n)),
         )
         await conn.commit()
 
