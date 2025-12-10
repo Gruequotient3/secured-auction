@@ -8,7 +8,8 @@ CREATE TABLE UserInfo (
     username      TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     balance       REAL NOT NULL DEFAULT 0,
-    public_key    TEXT,
+    public_key_e    TEXT,
+    public_key_n    TEXT,
     created_at    INTEGER NOT NULL                -- unix timestamp
 );
 
