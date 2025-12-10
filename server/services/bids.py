@@ -73,6 +73,19 @@ class Bid:
         return await Bid._row_to_schema(row)
 
     @staticmethod
+    async def get_last_bid(auction_id: int) -> Optional[BidSchema]:
+        async with aiosqlite.connect(DB_PATH) as db:
+            db.row_factory = aiosqlite.Row
+            sql = "SELECT * FROM Bids WHERE auction_id = ? ORDER BY created_at DESC LIMIT 1"
+            cursor = await db.execute(sql, (auction_id,))
+            row = await cursor.fetchone()
+
+        if row is None:
+            return None
+
+        return await Bid._row_to_schema(row)
+
+    @staticmethod
     async def edit(data: EditBidSchema) -> Optional[BidSchema]:
         async with aiosqlite.connect(DB_PATH) as db:
             db.row_factory = aiosqlite.Row
