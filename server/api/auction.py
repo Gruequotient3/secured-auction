@@ -13,6 +13,8 @@ from fastapi import (
 )
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials
+from fastapi.encoders import jsonable_encoder
+
 
 # Database
 import aiosqlite
@@ -239,6 +241,26 @@ async def create_bid(
 
     bid = await Bid.create(current_user_id, data)
     return bid
+
+@auction_router.get(
+    "/update-price",
+    summary="Update the price of an auction"
+)
+async def update_price(
+    auction_id: int = Form(...),
+):
+    auction = await Auction.get(auction_id)
+    if auction is None:
+        errorMessage(404, 40, "Auction not found")
+    updated_price = Bid.get_highest(auction_id)
+    return JSONResponse(
+        content=jsonable_encoder(
+            {
+                "auction_id": auction_id,
+                "updated_price": updated_price,
+            }
+        )
+    )
 
 
 @auction_router.post(

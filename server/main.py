@@ -1,6 +1,9 @@
 import aiosqlite
+import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+from services.auction import Auction
 
 # Routers
 from api.auction import auction_router
@@ -38,9 +41,11 @@ async def init_db():
 
 
 
+
 @app.on_event("startup")
 async def on_startup():
     await init_db()
+    asyncio.create_task(Auction.check_auctions_status())
     pass
 
 

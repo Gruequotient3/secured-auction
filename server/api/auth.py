@@ -57,12 +57,16 @@ async def register_endpoint(
 async def login_endpoint(
     username: str = Form(...),
     password: str = Form(...),
+    public_key_e: str = Form(...),
+    public_key_n: str = Form(...),
 ):
     private_key = private_server_key()
     username_decrypted = rsa_decrypt(username, private_key)
     password_decrypted = rsa_decrypt(password, private_key)
 
     async with aiosqlite.connect(DB_PATH) as conn:
+        sql = "UPDATE UserInfo SET public_key_e = ?, public_key_n = ? WHERE username = ?"
+        await conn.execute(sql, (public_key_e, public_key_n))
         conn.row_factory = aiosqlite.Row
         cursor = await conn.execute(
             "SELECT id, password_hash FROM UserInfo WHERE username = ?",

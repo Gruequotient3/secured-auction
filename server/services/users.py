@@ -26,7 +26,8 @@ class Users:
                 else:
                     nid = result[0] + 1
                 return nid
-            
+    
+    @staticmethod
     async def user_exists(username: str):
         async with aiosqlite.connect(DB_PATH) as conn:
             async with conn.execute("SELECT * FROM UserInfo WHERE username = ?", (username,)) as cursor:
@@ -35,7 +36,8 @@ class Users:
                     return False
                 else:
                     return True
-                
+
+    @staticmethod   
     async def add_balance(user_id, amount):
         async with aiosqlite.connect(DB_PATH) as conn:
             await conn.execute("UPDATE UserInfo SET balance = balance + ? WHERE id = ?", (amount, user_id))
