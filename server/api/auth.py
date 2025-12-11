@@ -12,17 +12,24 @@ from common.utils import errorMessage, validate_password, validate_username
 from common.encrypted import rsa_decrypt, rsa_encrypt, rsa_sign, rsa_verify, public_server_key, private_server_key, hash_password, check_password, create_access_token
 from config.config import DB_PATH, SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 from services.users import Users
+from schemas.request import *
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register")
 async def register_endpoint(
-    username: str = Form(...),
-    password: str = Form(...),
-    public_key_e: str = Form(...),
-    public_key_n: str = Form(...),
+    # username: str = Form(...),
+    # password: str = Form(...),
+    # public_key_e: str = Form(...),
+    # public_key_n: str = Form(...),
+    data: RegisterRequest
 ):
+    username = data.username
+    password = data.password
+    public_key_e = data.public_key_e
+    public_key_n = data.public_key_n
+
     public_key = {
         "e": int(public_key_e),
         "n": int(public_key_n),
@@ -72,12 +79,18 @@ async def register_endpoint(
 
 @router.post("/login")
 async def login_endpoint(
-    username: str = Form(...),
-    password: str = Form(...),
-    public_key_e: str = Form(...),
-    public_key_n: str = Form(...),
+    # username: str = Form(...),
+    # password: str = Form(...),
+    # public_key_e: str = Form(...),
+    # public_key_n: str = Form(...),
+    data: RegisterRequest
 ):
     
+    username = data.username
+    password = data.password
+    public_key_e = data.public_key_e
+    public_key_n = data.public_key_n
+
     format_Username = int(username)
     format_Password = int(password)
     private_key = private_server_key()
