@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Créez votre enchère</title>
+    <style>
+        .btn {
+            background:#d1ab12; color:rgb(255, 255, 255); border:none; padding:0.6rem 0.8rem; border-radius:6px; cursor:pointer;
+            font-weight:600; flex:1;display: inline-flex;align-items: center; justify-content: center;text-align: center;
+        }
+        .btn:active { transform:translateY(1px); }
+    </style>
+</head>
+<body>
+  <main style="max-width:720px;margin:2rem auto;padding:1.5rem;background:#fff;border-radius:10px;box-shadow:0 8px 24px rgba(15,23,42,0.06);">
+    <h1 style="margin-top:0;text-align:center">Créer une enchère</h1>
+
+    <form id="auctionForm" novalidate>
+      <!-- Zone dépôt image -->
+      <div id="dropZone" tabindex="0" aria-label="Zone de dépôt d'image"
+           style="border:2px dashed #e2e8f0;border-radius:8px;padding:18px;display:flex;flex-direction:column;align-items:center;gap:12px;cursor:pointer;">
+        <!-- input type=file caché -->
+        <input id="fileInput" type="file" accept="image/*" style="display:none" />
+
+        <!-- icône + texte -->
+        <div style="text-align:center;color:#475569;">
+          <strong>Déposez l'image ici</strong><br>
+          ou
+          <!-- bouton Parcourir visible -->
+          <button type="button" id="browseBtn" style="background:#d1ab12;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;margin-left:6px">
+            Parcourir
+          </button>
+        </div>
+        <div style="font-size:0.85rem;color:#94a3b8">Formats acceptés : PNG, JPG, WEBP. Taille max : 7 Mo.</div>
+
+        <!-- Aperçu de l'image -->
+        <div id="previewContainer" style="display:none;width:100%;max-width:460px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <img id="previewImage" src="" alt="Aperçu de l'image" style="max-width:160px;max-height:120px;border-radius:6px;object-fit:cover;border:1px solid #e6eef7" />
+            <div style="flex:1">
+              <div id="fileName" style="font-weight:600;color:#0f172a"></div>
+              <div id="fileSize" style="font-size:0.85rem;color:#64748b;margin-top:6px"></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <button type="button" id="removeBtn" style="background:#e2e8f0;color:#0f172a;border:none;padding:6px 8px;border-radius:6px;cursor:pointer">Suppr.</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="dropError" style="color:#dc2626;font-size:0.85rem;display:none"></div>
+      </div>
+
+      <div style="margin-top:1rem;display:flex;flex-direction:column;gap:10px">
+        <input id="title" name="title" placeholder="Titre de l'enchère" required style="padding:0.7rem;border:1px solid #e6eef7;border-radius:6px;font-size:1rem" />
+        <textarea id="description" name="description" placeholder="Description de l'objet" rows="4"
+    style="padding:0.7rem;border:1px solid #e6eef7;border-radius:6px;font-size:1rem; resize: none; width:100%; box-sizing:border-box;"></textarea>
+        <input id="startPrice" name="startPrice" type="number" min="0" step="0.01" placeholder="Prix de départ (€)" style="padding:0.7rem;border:1px solid #e6eef7;border-radius:6px;font-size:1rem" />
+      <label for="endDate" style="font-size:0.85rem;color:#000000;margin-top:6px">Date et heure de fin</label>
+    <input id="endDate" name="endDate" type="datetime-local" required
+         style="padding:0.7rem;border:1px solid #e6eef7;border-radius:6px;font-size:1rem;width:100%;box-sizing:border-box" />
+    <div id="endDateError" style="color:#dc2626;font-size:0.85rem;display:none">La date de fin doit être dans le futur.</div>
+</div>
+    </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:1rem">
+        <a href="index.html" class="btn secondary" role="button">Annuler</a>
+        <button type="submit" class="btn">Publier</button>
+      </div>
+    </form>
+  </main>
+
+  <script>
+    (function(){ 
+      const MAX_SIZE = 7 * 1024 * 1024; // 7 Mo en octets 
+      const dropZone = document.getElementById('dropZone');
+      const fileInput = document.getElementById('fileInput');
+      const browseBtn = document.getElementById('browseBtn');
+      const previewContainer = document.getElementById('previewContainer');
+      const previewImage = document.getElementById('previewImage');
+      const fileNameEl = document.getElementById('fileName');
+      const fileSizeEl = document.getElementById('fileSize');
+      const removeBtn = document.getElementById('removeBtn');
+      const dropError = document.getElementById('dropError');
+
+      let currentFile = null;
+
+      function humanFileSize(bytes){ // fonction pour afficher taille lisible
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+        return (bytes/(1024*1024)).toFixed(2) + ' MB';
+      }
+
+      function showError(msg){
+        dropError.textContent = msg;
+        dropError.style.display = 'block';
+      }
+      function clearError(){
+        dropError.style.display = 'none';
+        dropError.textContent = '';
+      }
+
+      function handleFile(file){
+        clearError();
+        if (!file) return;
+        if (!file.type.startsWith('image/')) { // vérifier type
+          showError('Type de fichier non supporté — sélectionnez une image.');
+          return;
+        }
+        if (file.size > MAX_SIZE){
+          showError('Fichier trop volumineux (max 5 Mo).');
+          return;
+        }
+        currentFile = file;
+        const url = URL.createObjectURL(file); // créer URL pour aperçu
+        previewImage.src = url;
+        fileNameEl.textContent = file.name;
+        fileSizeEl.textContent = humanFileSize(file.size);
+        previewContainer.style.display = 'block';
+      }
+
+      // bouton Parcourir ouvre le file picker
+      browseBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        fileInput.click();
+      });
+
+      // cliquer sur la zone de dépôt ouvre le file picker
+      // dropZone.addEventListener('click', () => fileInput.click());
+
+      // selection via file input
+      fileInput.addEventListener('change', (e) => {
+        handleFile(e.target.files[0]);
+        fileInput.value = '';
+      });
+
+      
+
+      removeBtn.addEventListener('click', () => {
+        previewContainer.style.display = 'none';
+        previewImage.src = '';
+        currentFile = null;
+        clearError();
+      });
+
+      // submit: construction
+      document.getElementById('auctionForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const title = document.getElementById('title').value.trim();
+        if (!title) { alert('Donnez un titre à l\'enchère'); return; }
+        if (!currentFile) { alert('Ajoutez une image pour l\'enchère'); return; }
+        if (!document.getElementById('endDate').value) {
+          alert('Veuillez sélectionner une date et heure de fin valides.');
+          return;
+        }
+        // validation date de fin
+        const endDateEl = document.getElementById('endDate');
+        const endDateError = document.getElementById('endDateError');
+        endDateError.style.display = 'none';
+        if (endDateEl) {
+            const endVal = endDateEl.value;
+            if (!endVal || new Date(endVal) <= new Date()) {
+            endDateError.style.display = 'block';
+            return;
+            }
+        }
+        const fd = new FormData();
+        fd.append('title', title);
+        fd.append('description', document.getElementById('description').value);
+        fd.append('startPrice', document.getElementById('startPrice').value || '0');
+        if (currentFile) fd.append('image', currentFile, currentFile.name);
+        if (endDateEl) fd.append('endDate', endDateEl.value);
+        
+      });
+    })();
+  </script>
+</body>
