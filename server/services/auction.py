@@ -1,6 +1,8 @@
 # Builtins
 from datetime import datetime
 from typing import Optional, List
+from threading import Thread
+import asyncio
 
 # Database
 import aiosqlite
@@ -20,7 +22,7 @@ class Auction:
     async def _row_to_schema(row: aiosqlite.Row) -> AuctionSchema:
         return AuctionSchema(
             id=row["id"],
-            seller_id=row["seller_id"],
+            # seller_id=row["seller_id"],
             title=row["title"],
             description=row["description"],
             base_price=row["base_price"],
@@ -68,7 +70,7 @@ class Auction:
 
             return AuctionSchema(
                 id=auction_id,
-                seller_id=seller_id,
+                # seller_id=seller_id,
                 title=data.title,
                 description=data.description,
                 base_price=data.base_price,
@@ -157,3 +159,70 @@ class Auction:
             rows = await cursor.fetchall()
 
         return [await Auction._row_to_schema(row) for row in rows]
+    
+    @staticmethod
+    async def get_auctions_user_is_in(user_id):
+        """
+        Returns a list of all the auctions the user is in.
+        """
+        async with aiosqlite.connect(DB_PATH) as db:
+            db.row_factory = aiosqlite.Row
+            sql = "SELECT * FROM Auction_Participants WHERE user_id = ?"
+            cursor = await db.execute(sql, (user_id, ))
+            rows = await cursor.fetchall()
+
+            return [await Auction._row_to_schema(row) for row in rows]
+
+    @staticmethod
+    async def auctions_status():
+        async with aiosqlite.connect(DB_PATH) as db:
+            db.row_factory = aiosqlite.Row
+            sql = "SELECT * FROM Auctions WHERE status = ?"
+            cursor = await db.execute(sql, ("ACTIVE", ))
+            rows = await cursor.fetchall()
+
+            for row in rows:
+                if row["end_at"] >= int(datetime.utcnow().timestamp()):
+                    sql_update = "UPDATE Auctions SET status = ? WHERE auction_id = ?"
+                    await db.execute(sql_update, ("INACTIVE", row["auction_id"], ))
+                    await db.commit()
+
+                    sql_update = "SELECT * FROM Bids WHERE auction_id = ? ORDER BY price DESC LIMIT 1"
+                    cursor_update = await db.execute(sql_update, (row["auction_id"], ))
+                    row_winner_bid = await cursor_update.fetchone()
+
+                    if row_winner_bid == None:
+                        continue
+
+                    final_bid = float(row_winner_bid["price"])
+
+                    sql_update = "SELECT * FROM UserInfo WHERE id = ?"
+                    cursor_update = await db.execute(sql_update, (row_winner_bid["user_id"], ))
+                    row_winner = await cursor_update.fetchone()
+
+                    winner_new_balance = float(row_winner["balance"]) - final_bid
+
+                    sql_update = "SELECT * FROM UserInfo WHERE id = ?"
+                    cursor_update = await db.execute(sql_update, (row["seller_id"], ))
+                    row_seller = await cursor_update.fetchone()
+
+                    seller_new_balance = float(row_seller["balance"]) + final_bid
+
+                    sql_update = "UPDATE UserInfo SET balance = ? WHERE id = ?"
+                    await db.execute(sql_update, (winner_new_balance, row_winner["id"], ))
+                    await db.commit()
+
+                    sql_update = "UPDATE UserInfo SET balance = ? WHERE id = ?"
+                    await db.execute(sql_update, (seller_new_balance, row_seller["id"], ))
+                    await db.commit()
+
+            # if active and time over -> inactive then credit seller account and debit bidder
+    
+    @staticmethod
+    async def check_auctions_status():
+        while True:
+            await Auction.auctions_status()
+            await asyncio.sleep(5)
+
+
+

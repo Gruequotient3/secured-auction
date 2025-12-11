@@ -1,4 +1,9 @@
 # Builtins
+# Verifier credit avant bid
+# Ajouter get history bids ok
+# Get auction quelque chose ou il participe ok
+# Statut de l'enchere "en cours, perdant, gagnant" ok
+# Si gagnant, debit du montant sur le compte ok 
 from typing import Optional
 from datetime import datetime
 
@@ -54,7 +59,7 @@ class Bid:
             return BidSchema(
                 id=bid_id,
                 auction_id=data.auction_id,
-                user_id=user_id,
+                # user_id=user_id,
                 created_at=created_at,
                 price=data.price,
             )
@@ -120,3 +125,22 @@ class Bid:
             await db.commit()
 
             return cursor.rowcount > 0
+        
+    @staticmethod
+    async def get_highest(auction_id):
+        async with aiosqlite.connect(DB_PATH) as db:
+            sql = "SELECT MAX(price) FROM Bids WHERE auction_id = ?"
+            cursor = await db.execute(sql, (auction_id, ))
+            price = await cursor.fetchval()
+            return price
+        
+    @staticmethod
+    async def get_auction_bid_history(auction_id):
+        async with aiosqlite.connect(DB_PATH) as db:
+            db.row_factory = aiosqlite.Row
+            sql = "SELECT * FROM Bids ORDER BY created_at DESC WHERE auction_id = ?"
+            cursor = await db.execute(sql, (auction_id, ))
+            rows = await cursor.fetchall()
+
+            return [await Bid._row_to_schema(row) for row in rows]
+

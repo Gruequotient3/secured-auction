@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 class AuctionSchema(BaseModel):
     id: int
-    seller_id: int
+    seller_id: Optional[int] = None
     title: str
     description: str
     base_price: float

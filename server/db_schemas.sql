@@ -18,7 +18,7 @@ CREATE TABLE UserInfo (
 -- =====================
 CREATE TABLE Auctions (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    seller_id   TEXT NOT NULL,
+    seller_id   INTEGER NOT NULL,
     title       TEXT NOT NULL,
     description TEXT,
     base_price  REAL NOT NULL,

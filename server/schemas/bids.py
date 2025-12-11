@@ -1,10 +1,11 @@
+from typing import Optional
 from pydantic import BaseModel
 
 
 class BidSchema(BaseModel):
     id: int
     auction_id: int
-    user_id: int
+    user_id: Optional[int] = None
     created_at: int
     price: float
 

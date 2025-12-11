@@ -26,7 +26,8 @@ class Users:
                 else:
                     nid = result[0] + 1
                 return nid
-            
+    
+    @staticmethod
     async def user_exists(username: str):
         async with aiosqlite.connect(DB_PATH) as conn:
             async with conn.execute("SELECT * FROM UserInfo WHERE username = ?", (username,)) as cursor:
@@ -35,8 +36,29 @@ class Users:
                     return False
                 else:
                     return True
-                
+
+    @staticmethod   
     async def add_balance(user_id, amount):
         async with aiosqlite.connect(DB_PATH) as conn:
             await conn.execute("UPDATE UserInfo SET balance = balance + ? WHERE id = ?", (amount, user_id))
             await conn.commit()
+
+    @staticmethod
+    async def get_user_balance(user_id):
+        async with aiosqlite.connect(DB_PATH) as conn:
+            conn.row_factory = aiosqlite.Row
+            cursor = await conn.execute("SELECT balance FROM UserInfo WHERE id = ?", (user_id, ))
+            row = await cursor.fetchone()
+            return row["balance"]
+        
+    @staticmethod
+    async def get_user_public_key(user_id):
+        async with aiosqlite.connect(DB_PATH) as conn:
+            conn.row_factory = aiosqlite.Row
+            cursor = await conn.execute("SELECT * FROM UserInfo WHERE id = ?", (user_id, ))
+            row = await cursor.fetchone()
+            key = {
+                "e": int(row["public_key_e"]),
+                "n": int(row["public_key_n"])
+            }
+            return key
