@@ -330,10 +330,16 @@ async def create_bid(
     now_ts = int(datetime.utcnow().timestamp())
     if auction.end_at <= now_ts:
         errorMessage(400, 42, "Auction already finished")
+        
+    user = await Users.get(current_user_id)
+    if user.balance < float(message_dict["price"]):
+        errorMessage(400, 47, "Insufficient credit")
+
+
 
     bidData = CreateBidSchema(
         auction_id=auction_id,
-        price=message_dict["price"]
+        price=float(message_dict["price"])
     )
 
     bid = await Bid.create(current_user_id, bidData)
@@ -426,6 +432,18 @@ async def cancel_bid(
 
     if existing.user_id != current_user_id:
         errorMessage(403, 44, "You are not the owner of this bid")
+
+
+    now_ts = int(datetime.utcnow().timestamp())
+    if (now_ts - existing.created_at) > 10:
+        errorMessage(400, 45, "You cannot cancel a bid after 10 seconds")
+
+    last_bid = await Bid.get_last_bid(existing.auction_id)
+    if last_bid is None:
+        errorMessage(404, 43, "Bid not found")
+    
+    if last_bid.id != existing.id:
+        errorMessage(400, 46, "You can only cancel your bid if it is the latest one")
 
     deleted = await Bid.delete(data)
     if not deleted:
