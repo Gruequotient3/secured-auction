@@ -4,6 +4,7 @@ import json
 from datetime import datetime, timedelta
 from Crypto.PublicKey import RSA
 from Crypto.Util.number import bytes_to_long, long_to_bytes
+from Crypto.Hash import SHA256
 
 # Internals
 from config.config import (
@@ -14,12 +15,28 @@ from config.config import (
 )
 
 
+def rsa_sign(message, privateKey):
+    hash = SHA256.new(message.encode("utf-8"))
+    m = bytes_to_long(hash.digest())
+
+    signature = pow(m, privateKey["d"], privateKey["n"])
+    return signature
+
+
+def rsa_verify(message, signature, publicKey):
+    hash = SHA256.new(message.encode("utf-8"))
+    m = bytes_to_long(hash.digest())
+
+    verify = pow(signature, publicKey["e"], publicKey["n"])
+    return m == verify
+
+
 def rsa_encrypt(message, publicKey):
     m = bytes_to_long(message.encode("utf-8"))
     if m >= publicKey["n"]:
         return None
     c = pow(m, publicKey["e"], publicKey["n"])
-    return c
+    return str(c)
 
 
 def rsa_decrypt(cipher, privateKey):

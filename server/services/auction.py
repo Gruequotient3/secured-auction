@@ -22,7 +22,7 @@ class Auction:
     async def _row_to_schema(row: aiosqlite.Row) -> AuctionSchema:
         return AuctionSchema(
             id=row["id"],
-            seller_id=row["seller_id"],
+            # seller_id=row["seller_id"],
             title=row["title"],
             description=row["description"],
             base_price=row["base_price"],
@@ -70,7 +70,7 @@ class Auction:
 
             return AuctionSchema(
                 id=auction_id,
-                seller_id=seller_id,
+                # seller_id=seller_id,
                 title=data.title,
                 description=data.description,
                 base_price=data.base_price,
@@ -177,13 +177,13 @@ class Auction:
     async def auctions_status():
         async with aiosqlite.connect(DB_PATH) as db:
             db.row_factory = aiosqlite.Row
-            sql = "SELECT * FROM Auction WHERE status = ?"
+            sql = "SELECT * FROM Auctions WHERE status = ?"
             cursor = await db.execute(sql, ("ACTIVE", ))
             rows = await cursor.fetchall()
 
             for row in rows:
                 if row["end_at"] >= int(datetime.utcnow().timestamp()):
-                    sql_update = "UPDATE Auction SET status = ? WHERE auction_id = ?"
+                    sql_update = "UPDATE Auctions SET status = ? WHERE auction_id = ?"
                     await db.execute(sql_update, ("INACTIVE", row["auction_id"], ))
                     await db.commit()
 

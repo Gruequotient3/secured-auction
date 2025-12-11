@@ -9,7 +9,7 @@ import json
 
 # Internals
 from common.utils import errorMessage, validate_password, validate_username
-from common.encrypted import rsa_decrypt, rsa_encrypt, public_server_key, private_server_key, hash_password, check_password, create_access_token
+from common.encrypted import rsa_decrypt, rsa_encrypt, rsa_sign, rsa_verify, public_server_key, private_server_key, hash_password, check_password, create_access_token
 from config.config import DB_PATH, SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 from services.users import Users
 
@@ -23,9 +23,17 @@ async def register_endpoint(
     public_key_e: str = Form(...),
     public_key_n: str = Form(...),
 ):
-
-    format_Username = int(username[1:])
-    format_Password = int(password[1:])
+    public_key = {
+        "e": int(public_key_e),
+        "n": int(public_key_n),
+    }
+    # if not rsa_verify(message, int(signature), public_key):
+    #     errorMessage(401, 10, "Signature failed")
+    # message_json = json.loads(message)
+    # format_Username = int(message_json["username"])
+    # format_Password = int(message_json["password"])
+    format_Username = int(username)
+    format_Password = int(password)
     private_key = private_server_key()
     username_decrypted = rsa_decrypt(format_Username, private_key)
     if username_decrypted == None:
@@ -43,11 +51,20 @@ async def register_endpoint(
         )
         await conn.commit()
 
+    json_Response = {
+        "status": "CREAT",
+        "message": "OK",
+    }
+
+    message = json.dumps(json_Response, separators=(",", ":"), sort_keys=True)
+
+    signature = rsa_sign(message, private_key)
+
     return JSONResponse(
         content=jsonable_encoder(
             {
-                "status": "CREAT",
-                "message": "OK",
+                "message": message,
+                "signature": signature,
             }
         )
     )
@@ -60,9 +77,12 @@ async def login_endpoint(
     public_key_e: str = Form(...),
     public_key_n: str = Form(...),
 ):
+    
+    format_Username = int(username)
+    format_Password = int(password)
     private_key = private_server_key()
-    username_decrypted = rsa_decrypt(username, private_key)
-    password_decrypted = rsa_decrypt(password, private_key)
+    username_decrypted = rsa_decrypt(format_Username, private_key)
+    password_decrypted = rsa_decrypt(format_Password, private_key)
 
     async with aiosqlite.connect(DB_PATH) as conn:
         sql = "UPDATE UserInfo SET public_key_e = ?, public_key_n = ? WHERE username = ?"
@@ -81,23 +101,44 @@ async def login_endpoint(
 
     access_token = create_access_token({"sub": str(user_id)})
 
+    username_encrypted = rsa_encrypt(username_decrypted, {"e": int(public_key_e), "n": int(public_key_n)})
+
+    json_Response = {   
+        "status": "AUTHN",
+        "pseudo": username_encrypted,
+        "message": "OK",
+        "access_token": access_token,
+        "token_type": "bearer",
+    }
+
+    message = json.dumps(json_Response, separators=(",", ":"), sort_keys=True)
+
+    signature = rsa_sign(message, private_key)
+
     return JSONResponse(
         content=jsonable_encoder(
-            {   
-                "status": "AUTHN",
-                "pseudo": username_decrypted,
-                "message": "OK",
-                "access_token": access_token,
-                "token_type": "bearer",
+            {
+                "message": message,
+                "signature": signature,
             }
         )
     )
 
+
 @router.get("/public-key")
 async def publickey_endpoint():
-    public_key = public_server_key()
+    json_Response = public_server_key()
+    private_key = private_server_key()
+
+    message = json.dumps(json_Response, separators=(",", ":"), sort_keys=True)
+
+    signature = rsa_sign(message, private_key)
+
     return JSONResponse(
         content=jsonable_encoder(
-            public_key
+            {
+                "message": message,
+                "signature": signature
+            }
         )
     )

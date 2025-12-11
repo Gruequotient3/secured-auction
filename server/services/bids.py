@@ -2,8 +2,8 @@
 # Verifier credit avant bid
 # Ajouter get history bids ok
 # Get auction quelque chose ou il participe ok
-# Statut de l'enchere "en cours, perdant, gagnant"
-# Si gagnant, debit du montant sur le compte
+# Statut de l'enchere "en cours, perdant, gagnant" ok
+# Si gagnant, debit du montant sur le compte ok 
 from typing import Optional
 from datetime import datetime
 
@@ -59,7 +59,7 @@ class Bid:
             return BidSchema(
                 id=bid_id,
                 auction_id=data.auction_id,
-                user_id=user_id,
+                # user_id=user_id,
                 created_at=created_at,
                 price=data.price,
             )
