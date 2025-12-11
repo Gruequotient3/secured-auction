@@ -237,6 +237,10 @@ async def create_bid(
     if auction.end_at <= now_ts:
         errorMessage(400, 42, "Auction already finished")
 
+    user = await Users.get(current_user_id)
+    if user.balance < data.price:
+        errorMessage(400, 47, "Insufficient credit")
+
     bid = await Bid.create(current_user_id, data)
     return bid
 
