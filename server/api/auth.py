@@ -99,7 +99,7 @@ async def login_endpoint(
 
     async with aiosqlite.connect(DB_PATH) as conn:
         sql = "UPDATE UserInfo SET public_key_e = ?, public_key_n = ? WHERE username = ?"
-        await conn.execute(sql, (public_key_e, public_key_n))
+        await conn.execute(sql, (public_key_e, public_key_n, username_decrypted, ))
         conn.row_factory = aiosqlite.Row
         cursor = await conn.execute(
             "SELECT id, password_hash FROM UserInfo WHERE username = ?",
