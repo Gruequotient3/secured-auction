@@ -529,7 +529,6 @@ async def get_balance_endpoint(
 
     message = json.dumps(json_response, separators=(",", ":"),
      sort_keys=True)
-    print(message);
     signature = rsa_sign(message, private_key)
     return JSONResponse(
         content=jsonable_encoder(
