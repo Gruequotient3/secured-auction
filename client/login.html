@@ -24,6 +24,7 @@
         .secondary { background:rgb(218, 218, 218); color:black; }
         .help { font-size:0.82rem; color:gray; margin-top:0.6rem; text-align:center; }
         .error { color:red; font-size:0.82rem; margin-top:0.4rem; display:none; }
+        .incorrect { color:red; font-size:0.82rem; margin-top:0.4rem; display:none; }
         .show-pass { background:transparent; border:1px solid #cbd5e1; padding:0.45rem 0.6rem; border-radius:6px; cursor:pointer; } /* bouton afficher/masquer le mot de passe */
     </style>
 </head>
@@ -37,6 +38,7 @@
             <div class="field">
                 <label for="pseudo">Pseudo</label>
                 <input id="pseudo" name="pseudo" type="text" placeholder="Entrez votre pseudo" minlength="3" maxlength="50" required autocomplete="username" />
+                <div class="incorrect" id="pseudoIncorrect">Le pseudo est incorrect</div>
                 <div class="error" id="pseudoError">Le pseudo doit contenir au moins 3 caractères.</div>
             </div>
 
@@ -46,11 +48,12 @@
                     <input id="password" name="password" type="password" placeholder="Entrez votre mot de passe" minlength="6" required autocomplete="current-password" style="flex:1" />
                     <button type="button" id="togglePass" class="show-pass" aria-pressed="false" title="Afficher / masquer le mot de passe">👁️</button>
                 </div>
+                <div class="incorrect" id="passwordIncorrect">Le mot de passe est incorrect</div>
                 <div class="error" id="passwordError">Le mot de passe doit contenir au moins 6 caractères.</div>
             </div>
 
             <div class="field controls">
-                <button class="btn" type="submit">Connexion</button>
+                <button id="submit" class="btn" type="button">Connexion</button>
                 <a class="btn secondary" href="create.html" role="button">Create</a>
             </div>
 
@@ -58,13 +61,19 @@
         </form>
     </main>
     
-    <script>
+    <script type="module">
+        import {loginRequest, getServerKey} from './js/request.js'
+        import {rsaVerify} from './js/security.js'
+
         const form = document.getElementById('loginForm');
         const pseudo = document.getElementById('pseudo');
         const password = document.getElementById('password');
         const pseudoError = document.getElementById('pseudoError');
+        const pseudoIncorrect = document.getElementById('pseudoIncorrect');
         const passwordError = document.getElementById('passwordError');
+        const passwordIncorrect = document.getElementById('passwordIncorrect');
         const toggle = document.getElementById('togglePass');
+        const submit = document.getElementById('submit');
 
         toggle.addEventListener('click', () => {
             const isHidden = password.type === 'password';
@@ -75,10 +84,10 @@
 
         function validateField() {
             let ok = true;
-            if (pseudo.value.trim().length < 3) {
+            if (pseudo.value.trim().length < 3 && pseudo.value.trim().length > 25) {
                 pseudoError.style.display = 'block'; ok = false;
             } else { pseudoError.style.display = 'none'; }
-            if (password.value.length < 6) {
+            if (password.value.length < 6 && password.value.length > 30) {
                 passwordError.style.display = 'block'; ok = false;
             } else { passwordError.style.display = 'none'; }
             return ok;
@@ -86,6 +95,38 @@
 
 
         form.addEventListener('input', () => { validateField(); });
+
+        async function submitForm(){
+            if (validateField()){
+                let data = JSON.parse(
+                    await loginRequest(pseudo.value, password.value),
+                    (key, value, context) => {
+                        if (key == "signature"){
+                            return BigInt(context.source);
+                        }
+                        return value;
+                    }
+                );
+                if (Object.hasOwn(data, "detail")){
+                    console.log(`${data.detail.status} ${data.detail.code} : ${data.detail.message}`)
+                    pseudoError.style.display = 'none';
+                    passwordError.style.display = 'none';
+                    pseudoIncorrect.style.display = 'block';
+                    passwordIncorrect.style.display = 'block';
+                }
+                else if (rsaVerify(data.message, data.signature, getServerKey()) == false){
+                    console.log("This request is not from the server");
+                }
+                else {
+                    let message = JSON.parse(data.message);
+                    localStorage.setItem("token", message.access_token);
+                    window.location.href = "index.html";
+                }
+            }
+        }
+
+        submit.onclick = await submitForm;
+
     </script>
 </body>
 </html></div>

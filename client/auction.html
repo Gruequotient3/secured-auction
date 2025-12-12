@@ -21,6 +21,7 @@
         .bid-label { font-size:0.85rem; color:#64748b; margin-bottom:0.3rem; }
         .bid-value { font-size:1.5rem; font-weight:bold; color:#d1ab12; }
         .bid-form { display:flex; gap:0.5rem; margin-bottom:1.5rem; }
+        .date-label { font-size:0.85rem; color:#64748b; margin-bottom:0.3rem; }
         input[type="number"] { flex:1; padding:0.7rem; border:1px solid #cbd5e1; border-radius:6px; font-size:0.95rem; }
         .btn {
             background:#d1ab12; color:white; border:none; padding:0.7rem 1.5rem; border-radius:6px; cursor:pointer;
@@ -41,6 +42,7 @@
             .bid-info { flex-direction:column; }
         }
     </style>
+    <script src="js/auction.js"></script>
 </head>
 <body>
     <div class="container">
@@ -54,7 +56,7 @@
                 <div class="item-image">
                     <img src="AS_logo.png" alt="Objet en vente" />
                 </div>
-                <div class="description">
+                <div id="description" class="description">
                     <strong>Logo de Auction Secured</strong><br><br>
                     Ceci est un exemple d'objet que nous pouvons mettre aux enchères.
                     Il s'agit d'un placeholder pour illustrer le fonctionnement de la plateforme d'enchères en ligne.
@@ -72,8 +74,8 @@
                             <div class="bid-value" id="currentBid">150 €</div>
                         </div>
                         <div>
-                            <div class="bid-label">Enchérisseur</div>
-                            <div class="bid-value" style="color:#0f172a; font-size:1rem;" id="bidderName">Anonyme</div>
+                            <div class="date-label">Fini dans</div>
+                            <div class="date" id="date"></div>
                         </div>
                     </div>
 
@@ -85,14 +87,6 @@
                     <div class="error" id="bidError">L'enchère doit être supérieure à l'enchère actuelle.</div>
                 
                 </div>
-
-                <div class="history">
-                    <h3>📋 Historique des enchères</h3>
-                    <div class="history-box" id="historyBox">
-                        <div class="history-item other">Enchère initiale : 150 € (Vendeur)</div>
-                    </div>
-                </div>
-
                 <div style="margin-top:1.5rem;">
                     <a href="index.html" style="color:#d1ab12; text-decoration:none; font-weight:600;">← Retour à la page principal</a>
                 </div>
@@ -100,22 +94,30 @@
         </div>
     </div>
 
-<script>
+<script type="module">
+    import { auctionRequest, updatePriceRequest, bidRequest, cancelBidRequest, getServerKey } from './js/request.js'
+    import { rsaVerify } from './js/security.js';
+    const description = document.getElementById('description');
     const bidAmount = document.getElementById('bidAmount');
     const bidBtn = document.getElementById('bidBtn');
     const cancelBtn = document.getElementById('cancelBtn');
     const bidError = document.getElementById('bidError');
     const currentBidEl = document.getElementById('currentBid');
-    const bidderNameEl = document.getElementById('bidderName');
     const historyBox = document.getElementById('historyBox');
+    const date = document.getElementById('date');
 
-    let currentBid = 150;
-    const bidHistory = [{ amount: 150, name: 'Vendeur', isUser: false }];
+    let auction = null;
+    let params = new URLSearchParams(document.location.search);
+    let id = params.get("id");
+    if (id == null) window.location.href="index.html";
 
-    function updateMinBid() {
-        const minBid = currentBid + 5;
-        bidAmount.min = minBid;
-    }
+    let duration = 0;
+    let currentBid = 0;
+    let basePrice = 0;
+    let lastBidId = null;
+    let lastBidCreatedAt = null; 
+    let cancelBidTimeout = null;
+    const bidHistory = [];
 
     function addHistoryElement(text, isUser = false) {
         const item = document.createElement('div');
@@ -126,83 +128,157 @@
         historyBox.scrollTop = historyBox.scrollHeight;
     }
 
-    function updateBid(amount, name, isUser=false) {
+    function updateBid(amount) {
         currentBid = amount;
         currentBidEl.textContent = `${amount} €`;
-        bidderNameEl.textContent = name;
-        updateMinBid();
-        // enable/disable cancel button selon règle (seulement si la meilleure enchère est de l'utilisateur)
-        refreshCancelButton();
     }
 
-    function refreshCancelButton(){
-        // bouton activé uniquement si la dernière entrée d'historique est une enchère de l'utilisateur ET elle est la meilleure
-        const last = bidHistory[bidHistory.length - 1];
-        if (last && last.isUser && last.amount === currentBid) {
-            cancelBtn.disabled = false;
-        } else {
-            cancelBtn.disabled = true;
+    function recordBid(amount, isUser) {
+        bidHistory.push({ amount, isUser });
+        addHistoryElement(`${amount} €`, isUser);
+        updateBid(amount, isUser);
+    }
+
+    async function getAuction(){
+        let data = JSON.parse(
+            await auctionRequest(id),
+            (key, value, context) => {
+                if (key == "signature"){
+                    return BigInt(context.source);
+                }
+                return value;
+            }
+        );
+        if (Object.hasOwn(data, "detail")){
+            console.loupdatePriceRequestg(`${data.detail.status} ${data.detail.code} : ${data.detail.message}`);
+            if (data.detail.code == 13 || data.detail.code == 14) window.location.href="login.html";
+        }
+        else if(rsaVerify(data.message, data.signature, getServerKey()) == false){
+            console.log("This request is not from the server");
+        }
+        else {
+            let json = JSON.parse(data.message);
+            auction = new Auction(json.id, json.title, json.description, json.base_price, json.end_at, false);
+            let end_at = Math.floor(new Date(auction.endsAt).getTime()); 
+            let now = Math.floor(new Date().getTime() / 1000);
+            duration = end_at - now;
+
+            description.innerHTML = `<strong>${auction.title}</strong><br><br>${auction.description}`
+            basePrice = auction.price;
+            updateBid(auction.price);
+            date.innerHTML = (new Intl.DurationFormat("fr-FR", { style: "short" }).format({
+            hours: Math.floor(duration / 3600),
+            minutes: Math.floor(duration / 60) % 60,
+            seconds: Math.floor(duration) % 60})
+        );
+        }
+        updateInformation();
+    }
+
+    async function updateInformation(){
+        duration -= 1;        
+        date.innerHTML = (new Intl.DurationFormat("fr-FR", { style: "short" }).format({
+            hours: Math.floor(duration / 3600),
+            minutes: Math.floor(duration / 60) % 60,
+            seconds: Math.floor(duration) % 60})
+        );
+
+        let data = JSON.parse(
+            await updatePriceRequest(id),
+            (key, value, context) => {
+                if (key == "signature"){
+                    return BigInt(context.source);
+                }
+                return value;
+            }
+        );
+        if (Object.hasOwn(data, "detail")){
+            console.log(`${data.detail.status} ${data.detail.code} : ${data.detail.message}`);
+            if (data.detail.code == 13 || data.detail.code == 14) window.location.href="login.html";
+        }
+        else if(rsaVerify(data.message, data.signature, getServerKey()) == false){
+            console.log("This request is not from the server");
+        }
+        else {
+            let json = JSON.parse(data.message);
+            if (json.updated_price == null && currentBid != basePrice) updateBid(basePrice);
+            if (json.updated_price != null && json.updated_price != currentBid) updateBid(json.updated_price);
         }
     }
 
-    function recordBid(amount, name, isUser) {
-        bidHistory.push({ amount, name, isUser });
-        addHistoryElement(`${name} : ${amount} €`, isUser);
-        updateBid(amount, name, isUser);
-    }
-
-    // click Enchérir
-    bidBtn.addEventListener('click', () => {
-        const bid = parseFloat(bidAmount.value);
-        if (!bid || bid <= currentBid) {
+    async function bid (){
+        const bidValue = parseFloat(bidAmount.value);
+        if (!bidValue || bidValue <= currentBid) {
             bidError.style.display = 'block';
             return;
         }
         bidError.style.display = 'none';
-        recordBid(bid, 'Vous', true);
-        bidAmount.value = '';
-        bidAmount.focus();
-
-        // simulation d'une surenchère automatique
-        setTimeout(() => {
-            const autoBid = bid + 10;
-            const names = ['Alice', 'Bob', 'Charles', 'Diana', 'Émile'];
-            const name = names[Math.floor(Math.random() * names.length)];
-            recordBid(autoBid, name, false);
-        }, 3000);
-    });
-
-    // click Annuler
-    cancelBtn.addEventListener('click', () => {
-        // on ne peut annuler que si la dernière enchère est bien une enchère de l'utilisateur ET elle est la meilleure
-        if (bidHistory.length <= 1) return; // rien à annuler
-        const last = bidHistory[bidHistory.length - 1];
-        if (!last.isUser || last.amount !== currentBid) {
-            // sécurité — désactiver bouton si état incohérent
-            refreshCancelButton();
+        let data = JSON.parse(
+            await bidRequest(id, bidValue),
+            (key, value, context) => {
+                if (key == "signature"){
+                    return BigInt(context.source);
+                }
+                return value;
+            }
+        );
+        if (Object.hasOwn(data, "detail")){
+            console.log(`${data.detail.status} ${data.detail.code} : ${data.detail.message}`);
+            if (data.detail.code == 13 || data.detail.code == 14) window.location.href="login.html";
             return;
         }
-        // retirer la dernière enchère utilisateur
-        bidHistory.pop();
+        else if(rsaVerify(data.message, data.signature, getServerKey()) == false){
+            console.log("This request is not from the server");
+        }
+        else {
+            let json = JSON.parse(data.message);
+            lastBidId = json.id;
+            lastBidCreatedAt = json.create_at;
+            cancelBtn.disabled = false;
+            cancelBidTimeout = setTimeout(() => {cancelBtn.disabled = true;}, 10000);
+        }
+    }
 
-        // retrouver la nouvelle enchère courante (la dernière du tableau)
-        const prev = bidHistory[bidHistory.length - 1];
-        updateBid(prev.amount, prev.name, prev.isUser);
+    async function cancelBid(){
+        let data = JSON.parse(
+            await cancelBidRequest(lastBidId),
+            (key, value, context) => {
+                if (key == "signature"){
+                    return BigInt(context.source);
+                }
+                return value;
+            }
+        );
+        if (Object.hasOwn(data, "detail")){
+            console.log(`${data.detail.status} ${data.detail.code} : ${data.detail.message}`);
+            if (data.detail.code == 13 || data.detail.code == 14) window.location.href="login.html";
+            return;
+        }
+        else if(rsaVerify(data.message, data.signature, getServerKey()) == false){
+            console.log("This request is not from the server");
+        }
+        else{
+            if (cancelBidTimeout != null){
+                clearTimeout(cancelBidTimeout);
+                cancelBidTimeout = null;
+            }
+            cancelBtn.disabled = true;
+        }
+    }
 
-        // ajouter une entrée d'historique annonçant l'annulation
-        addHistoryElement(`Vous avez annulé votre enchère de ${last.amount} €`, false);
+    // click Enchérir
+    bidBtn.onclick = await bid;
 
-        // rafraîchir bouton
-        refreshCancelButton();
-    });
+    // click Annuler
+    cancelBtn.onclick = await cancelBid;
 
     // appui sur Enter
     bidAmount.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') bidBtn.click();
     });
+    getAuction();
 
-    updateMinBid();
-    refreshCancelButton();
+    setInterval(await updateInformation, 1000);
 </script>
 
 </body>

@@ -8,52 +8,174 @@
         * { box-sizing: border-box; }
         a { text-decoration: none; }
         nav {background-color: #fff;padding: 0 20px;border-radius: 40px;box-shadow: 0 10px 40px rgba(159, 162, 177, .8);display: flex;overflow: hidden;overflow-x: auto;position: relative;}
-        .nav-item {color: #83818c;font-family: arial, sans-serif;padding: 20px;margin: 0 6px;position: relative;}
+        .nav-item {color: #83818c;font-family: arial, sans-serif;padding: 20px;margin: 0 6px;position: relative; display: flex;flex-direction: rows;}
+        .nav-item div {margin:0 6px;} 
         .nav-item:before {content: "";position: absolute;bottom: -6px;background-color: #dfe2ea;height: 5px;width: 100%;border-radius: 8px 8px 0 0;left: 0;transition: .3s;}
         .nav-item:not(.is-active):hover:before {bottom: 0;}
         .nav-item:not(.is-active):hover {color: #333;}
         .nav-indicator {position: absolute;left: 0;bottom: 0;height: 5px;transition: .4s;border-radius: 8px 8px 0 0;}
+        .auction-container {display: flex; flex-wrap: wrap; justify-content: center;}
+        .auction-item {max-width: 45%;background:#fff; border-radius:10px; box-shadow:0 6px 20px rgba(15,23,42,0.08); padding:2rem; display:grid; grid-template-columns:1fr 1fr; gap:2rem; margin: 2% 2%;}
+        .auction-item:hover {cursor:pointer;}
+        .auction-image { position: 50% center; max-height: 25rem ;border-radius:8px; overflow:hidden; }
+        .auction-image img { width:100%; height:auto; display:block; object-fit:cover; }
+        .auction-description { width: 100%; background:#f8fafc; padding:1rem; border-radius:6px; margin-bottom:1.5rem; color:#475569; line-height:1.6; overflow: hidden;}
+        .auction-price {font-size:1.5rem; font-weight:bold; color:#d1ab12; }
+        @media (max-width: 1192px) {
+            .auction-container {flex-direction: column;}
+            .auction-item{max-width:100%;}
+        }
+        @media (max-width: 768px) {
+            .auction-container {flex-direction: column;}
+            .auction-item {max-width: 100%; width:100%; grid-template-columns:1fr;}
+            .auction-image {max-height: 20rem;}
+        }
     </style>
+    <script src="js/auction.js"></script>
 </head>
 
 <body>
-    <nav>
-  <a href="login.html" class="nav-item" data-active-color="orange" data-target="Connexion">Connexion</a>
-  <a href="create.html" class="nav-item" data-active-color="green" data-target="Compte">Créer un compte</a>
-  <a href="bid.html" class="nav-item" data-active-color="blue" data-target="Argent">Votre Argent</a>
-<a href="create_auc.html" class="nav-item" data-active-color="red" data-target="Enchère">Créer Enchère</a> 
-</nav>
-
-<script>
+  <nav>
+    <a id="deconnexion" href="login.html" class="nav-item" data-active-color="orange" data-target="Deconnection"</a>Déconnection</a>
+    <a href="create_auc.html" class="nav-item" data-active-color="red" data-target="Enchère">Créer Enchère</a> 
+    <a href="bid.html" class="nav-item" data-active-color="blue" data-target="Argent">Votre Argent <div id="amount">0€</div></a>
+    
+    
+    <span class="nav-indicator"></span>  
+  </nav>
+<div class="auction-container">
+</div>
+<script type="module">
+    import {auctionListRequest, getToken, addBalanceRequest, getBalanceRequest, getServerKey} from './js/request.js'
+    import {rsaVerify} from "./js/security.js"
     const indicator = document.querySelector('.nav-indicator');
     const items = document.querySelectorAll('.nav-item');
+    const auctionContainer = document.querySelector('.auction-container');
+    const deconnexion = document.getElementById("deconnexion");
+    const amount = document.getElementById("amount");
+    let auctions = new Map();
 
     function handleIndicator(el) {
-  // Boucler sur items -> retirer la classe "is-active"
-  items.forEach(item => {
-    item.classList.remove('is-active');
-    item.removeAttribute('style');
-  })
-  
-  const elementColor = el.dataset.activeColor;
-  const target = el.dataset.target;
-  
-  // Styliser l'indicateur
-  indicator.style.width = `${el.offsetWidth}px`;
-  indicator.style.backgroundColor = elementColor;
-  indicator.style.left = `${el.offsetLeft}px`;
-  
-  // Ajout la classe is-active
-  el.classList.add('is-active');
-  el.style.color = elementColor;
-}
+      // Boucler sur items -> retirer la classe "is-active"
+      items.forEach(item => {
+        item.classList.remove('is-active');
+        item.removeAttribute('style');
+      })
+      
+      const elementColor = el.dataset.activeColor;
+      const target = el.dataset.target;
+      
+      // Styliser l'indicateur
+      indicator.style.width = `${el.offsetWidth}px`;
+      indicator.style.backgroundColor = elementColor;
+      indicator.style.left = `${el.offsetLeft}px`;
+      
+      // Ajout la classe is-active
+      el.classList.add('is-active');
+      el.style.color = elementColor;
+    }
+
+    async function getAmount(){
+      let data = JSON.parse(
+          await getBalanceRequest(),
+          (key, value, context) => {
+              if (key == "signature"){
+                  return BigInt(context.source);
+              }
+              return value;
+          }
+      );
+      if (Object.hasOwn(data, "detail")){
+          console.log(`${data.detail.status} ${data.detail.code} : ${data.detail.message}`)
+          if (data.detail.code == 13 || data.detail.code == 14) window.location.href="login.html";
+      }
+      else if(rsaVerify(data.message, data.signature, getServerKey()) == false){
+          console.log("This request is not from the server");
+      }
+      else{
+        let json = JSON.parse(data.message)
+        console.log(json.balance);
+        amount.innerHTML = json.balance + "€";
+      }
+    }
+
+    async function getAuctionList(){
+      let data = JSON.parse(
+          await auctionListRequest(),
+          (key, value, context) => {
+              if (key == "signature"){
+                  return BigInt(context.source);
+              }
+              return value;
+          }
+      );
+      if (Object.hasOwn(data, "detail")){
+          console.log(`${data.detail.status} ${data.detail.code} : ${data.detail.message}`)
+          if (data.detail.code == 13 || data.detail.code == 14) window.location.href="login.html";
+      }
+      else if(rsaVerify(data.message, data.signature, getServerKey()) == false){
+          console.log("This request is not from the server");
+      }
+      else{
+        let json = JSON.parse(data.message);
+        json.forEach((el) => {
+            let auction = new Auction(el.id, el.title, el.description, el.base_price, el.end_at, false)
+            auctions.set(auction, null);
+        })
+        console.log(auctions);
+
+      }
+    }
+
+    function displayAuctionList(){
+      while(auctionContainer.firstChild){
+        auctionContainer.removeChild(auctionContainer.firstChild);
+      }
+      auctions.forEach((value, key) => {
+        const div = document.createElement("div");
+        const imageDiv = document.createElement("div");
+        const image = document.createElement("img");
+        const description = document.createElement("div");
+        const price = document.createElement("div");
+
+        div.classList.add("auction-item");
+
+        imageDiv.classList.add("auction-image");
+        image.src = "AS_logo.png";
+
+        description.classList.add("auction-description");
+        description.innerHTML = `<strong>${key.title}</strong><br><br>` + key.description;
+
+        price.classList.add("auction-price");
+        price.innerHTML = `${key.price} €`;
+        
+        imageDiv.appendChild(image);
+        div.appendChild(imageDiv)
+        div.appendChild(description);
+        div.appendChild(price);
+        auctionContainer.appendChild(div);
+        
+        div.addEventListener('click', e => {
+          window.location.href= `auction.html?id=${key.id}`;
+        })
+        auctions[key] = div;
+      });
+    }
 
     items.forEach((item, index) => {
-    item.addEventListener('click', e => {
+      item.addEventListener('click', e => {
         handleIndicator(e.target)
+      });
+      item.classList.contains('is-active') && handleIndicator(item);
     });
-    item.classList.contains('is-active') && handleIndicator(item);
-});
+    deconnexion.onclick = () => {localStorage.removeItem("token")};
+
+    if (getToken() == null) window.location.href="login.html";
+    
+    amount.innerText = `${getAmount()}€`;
+    await getAuctionList();
+    displayAuctionList();
+
 </script>
 
 </body>

@@ -47,19 +47,22 @@
             </div>
 
             <div class="field controls">
-                <button class="btn" type="submit">Ajouter</button>
-                <a class="btn secondary" href="login.html" role="button">Retour</a>
+                <button id="submit" class="btn" type="button">Ajouter</button>
+                <a class="btn secondary" href="index.html" role="button">Retour</a>
             </div>
         </form>
     </main>
     
-    <script>
+    <script type="module">
+        import { addBalanceRequest, getToken, getServerKey } from './js/request.js';
+        import {rsaVerify} from './js/security.js';
         const form = document.getElementById('addMoneyForm');
         const password = document.getElementById('password');
         const montant = document.getElementById('montant');
         const passwordError = document.getElementById('passwordError');
         const montantError = document.getElementById('montantError');
         const toggle = document.getElementById('togglePass');
+        const submit = document.getElementById('submit');
 
         toggle.addEventListener('click', () => {
             const isHidden = password.type === 'password';
@@ -70,7 +73,7 @@
 
         function validateField() {
             let ok = true;
-            if (password.value.length < 6) {
+            if (password.value.length < 6 && password.value.length > 30) {
                 passwordError.style.display = 'block';
                 ok = false;
             } else {
@@ -85,8 +88,40 @@
             return ok;
         }
 
-
         form.addEventListener('input', () => { validateField(); });
+
+        if (getToken() == null) window.location.href = "index.html";
+
+        async function submitForm(){
+            if (validateField()){
+                let data = JSON.parse(
+                    await addBalanceRequest(montant.value),
+                    (key, value, context) => {
+                        if (key == "signature"){
+                            return BigInt(context.source);
+                        }
+                        return value;
+                    }
+                );
+                if (Object.hasOwn(data, "detail")){
+                    console.log(`${data.detail.status} ${data.detail.code} : ${data.detail.message}`)
+                    pseudoError.style.display = 'none';
+                    passwordError.style.display = 'none';
+                    pseudoIncorrect.style.display = 'block';
+                    passwordIncorrect.style.display = 'block';
+                    if (data.detail.code == 13 || data.detail.code == 14) window.location.href="login.html";
+                }
+
+                else if(rsaVerify(data.message, data.signature, getServerKey()) == false){
+                    console.log("This request is not from the server");
+                }
+                else {
+                    window.location.href = "index.html";
+                }
+            }
+        }
+
+        submit.onclick = await submitForm;
     </script>
 </body>
 </html>

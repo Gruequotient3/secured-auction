@@ -43,7 +43,7 @@
             <div class="field">
                 <label for="pseudo">Pseudo</label>
                 <input id="pseudo" name="pseudo" type="text" placeholder="Entrez votre pseudo" minlength="3" maxlength="50" required autocomplete="username" />
-                <div class="error" id="pseudoError">Le pseudo doit contenir au moins 3 caractères.</div>
+                <div class="error" id="pseudoError">Le pseudo doit contenir entre 3-25 caractères.</div>
             </div>
 
             <div class="field">
@@ -52,7 +52,7 @@
                     <input id="password" name="password" type="password" placeholder="Entrez votre mot de passe" minlength="6" required autocomplete="current-password" style="flex:1" />
                     <!-- <button type="button" id="togglePass" class="show-pass" aria-pressed="false" title="Afficher / masquer le mot de passe">👁️</button> -->
                 </div>
-                <div class="error" id="passwordError">Le mot de passe doit contenir au moins 6 caractères.</div>
+                <div class="error" id="passwordError">Le mot de passe doit contenir entre 6-30 caractères.</div>
             </div>
 
             <div class="field2">
@@ -64,17 +64,17 @@
                 <div class="error" id="password2Error">Les mots de passe ne correspondent pas.</div>
 
                 <div class="field controls">
-                    <button class="btn" type="button" onclick="if (validateField() && validatePasswordMatch()) { window.location.href = 'index.html'; }">Créer le compte</button>
+                    <button id="submit" class="btn" type="button"}">Créer le compte</button>
                 </div>
 
             </div>
-
-
-
         </form>
     </main>
     
-    <script>
+    <script type="module">
+        import {createAccountRequest, getServerKey} from './js/request.js'
+        import {rsaVerify} from './js/security.js'
+
         const form = document.getElementById('loginForm');
         const pseudo = document.getElementById('pseudo');
         const password = document.getElementById('password');
@@ -83,6 +83,7 @@
         const passwordError = document.getElementById('passwordError');
         const password2Error = document.getElementById('password2Error');
         const toggle = document.getElementById('togglePass');
+        const submit = document.getElementById('submit');
 
         function validatePasswordMatch() {
             if (password.value !== password2.value) {
@@ -96,16 +97,44 @@
 
         function validateField() {
             let ok = true;
-            if (pseudo.value.trim().length < 3) {
+            if (pseudo.value.trim().length < 3 && pseudo.value.trim().length > 25) {
                 pseudoError.style.display = 'block'; ok = false;
             } else { pseudoError.style.display = 'none'; }
-            if (password.value.length < 6) {
+            if (password.value.length < 6 && password.value.length > 30) {
                 passwordError.style.display = 'block'; ok = false;
             } else { passwordError.style.display = 'none'; }
             return ok;
         }
 
         form.addEventListener('input', () => { validateField(); });
+        
+        async function submitForm(){
+            if (validateField() && validatePasswordMatch()){
+                let data = JSON.parse(
+                    await createAccountRequest(pseudo.value, password.value),
+                    (key, value, context) => {
+                        if (key == "signature"){
+                            return BigInt(context.source);
+                        }
+                        return value;
+                    }
+                );
+                if (Object.hasOwn(data, "detail")){
+                    console.log(`${data.detail.status} ${data.detail.code} : ${data.detail.message}`)
+                    pseudoError.style.display = 'block';
+                    passwordError.style.display = 'block';
+                }
+                else if (rsaVerify(data.message, data.signature, getServerKey()) == false){
+                    console.log("This request is not from the server");
+                }
+                else {
+                    window.location.href= "login.html";
+                }
+            }
+        }
+
+        submit.onclick = await submitForm;
+
     </script>
 </body>
 </html></div>
