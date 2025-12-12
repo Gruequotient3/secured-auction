@@ -129,7 +129,7 @@ async def create_auction(
     message = data.message
     signature = data.signature
 
-    user_public_key = Users.get_user_public_key(current_user_id)
+    user_public_key = await Users.get_user_public_key(current_user_id)
 
     if not rsa_verify(message, signature, user_public_key):
         errorMessage(401, 00, "Signature verification failed")
@@ -141,8 +141,8 @@ async def create_auction(
 
     title = message_dict["title"]
     description = message_dict["description"]
-    price = message_dict["price"]
-    timestamp = message_dict["timestamp"]    
+    price = int(message_dict["price"])
+    timestamp = int(message_dict["timestamp"])    
 
     if not check_title(title):
         errorMessage(400, 32, "Title is not ok")
@@ -202,7 +202,7 @@ async def create_auction(
 async def list_auctions():
     private_key = private_server_key()
     auctions = await Auction.get_all()
-    auctions_dict = auctions.model_dump(mode='json')
+    auctions_dict = [auction.model_dump(mode="json") for auction in auctions]
     message = json.dumps(auctions_dict, separators=(",", ":"), sort_keys=True)
     signature = rsa_sign(message, private_key)
     return JSONResponse(
@@ -228,7 +228,7 @@ async def get_auction(
     message = data.message
     signature = data.signature
 
-    user_public_key = Users.get_user_public_key(current_user_id)
+    user_public_key = await Users.get_user_public_key(current_user_id)
 
     if not rsa_verify(message, signature, user_public_key):
         errorMessage(401, 00, "Signature verification failed")
@@ -271,7 +271,7 @@ async def delete_auction(
     message = data.message
     signature = data.signature
 
-    user_public_key = Users.get_user_public_key(current_user_id)
+    user_public_key = await Users.get_user_public_key(current_user_id)
 
     if not rsa_verify(message, signature, user_public_key):
         errorMessage(401, 00, "Signature verification failed")
@@ -312,7 +312,7 @@ async def create_bid(
     message = data.message
     signature = data.signature
 
-    user_public_key = Users.get_user_public_key(current_user_id)
+    user_public_key = await Users.get_user_public_key(current_user_id)
 
     if not rsa_verify(message, signature, user_public_key):
         errorMessage(401, 00, "Signature verification failed")
@@ -357,7 +357,7 @@ async def create_bid(
     )
 
 
-@auction_router.get(
+@auction_router.post(
     "/update-price",
     summary="Update the price of an auction"
 )
@@ -369,7 +369,7 @@ async def update_price(
     message = data.message
     signature = data.signature
 
-    user_public_key = Users.get_user_public_key(current_user_id)
+    user_public_key = await Users.get_user_public_key(current_user_id)
 
     if not rsa_verify(message, signature, user_public_key):
         errorMessage(401, 00, "Signature verification failed")
@@ -384,7 +384,7 @@ async def update_price(
     auction = await Auction.get(auction_id)
     if auction is None:
         errorMessage(404, 40, "Auction not found")
-    updated_price = Bid.get_highest(auction_id)
+    updated_price = await Bid.get_highest(auction_id)
     private_key = private_server_key()
     json_response = {
         "auction_id": auction_id,
@@ -414,7 +414,7 @@ async def cancel_bid(
     message = data.message
     signature = data.signature
 
-    user_public_key = Users.get_user_public_key(current_user_id)
+    user_public_key = await Users.get_user_public_key(current_user_id)
 
     if not rsa_verify(message, signature, user_public_key):
         errorMessage(401, 00, "Signature verification failed")
@@ -441,18 +441,19 @@ async def cancel_bid(
     last_bid = await Bid.get_last_bid(existing.auction_id)
     if last_bid is None:
         errorMessage(404, 43, "Bid not found")
-    
+
     if last_bid.id != existing.id:
         errorMessage(400, 46, "You can only cancel your bid if it is the latest one")
 
-    deleted = await Bid.delete(data)
+    deleted = await Bid.delete(bid_id)
     if not deleted:
         errorMessage(404, 43, "Bid not found")
 
     private_key = private_server_key()
 
     json_response = {
-        "bid_id": data.id
+        "status": "CNBID",
+        "message": "OK"
     }
 
     message = json.dumps(json_response, separators=(",", ":"), sort_keys=True)
@@ -467,7 +468,6 @@ async def cancel_bid(
         )
     )
 
-
 @auction_router.post(
     "/balance",
     summary="Add credit to account",
@@ -480,7 +480,7 @@ async def balance_endpoint(
     message = data.message
     signature = data.signature
 
-    user_public_key = Users.get_user_public_key(current_user_id)
+    user_public_key = await Users.get_user_public_key(current_user_id)
 
     if not rsa_verify(message, signature, user_public_key):
         errorMessage(401, 00, "Signature verification failed")
@@ -526,7 +526,10 @@ async def get_balance_endpoint(
         "balance": user_balance,
     }
 
-    message = json.dumps(json_response, separators=(",", ":"), sort_keys=True)
+
+    message = json.dumps(json_response, separators=(",", ":"),
+     sort_keys=True)
+    print(message);
     signature = rsa_sign(message, private_key)
     return JSONResponse(
         content=jsonable_encoder(

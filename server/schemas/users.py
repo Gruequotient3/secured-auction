@@ -6,7 +6,8 @@ class UserSchema(BaseModel):
     id: str
     username: str
     balance: float
-    public_key: Optional[str]
+    public_key_e: str
+    public_key_n: str
     created_at: int
 
 

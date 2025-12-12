@@ -18,16 +18,16 @@ from config.config import (
 def rsa_sign(message, privateKey):
     hash = SHA256.new(message.encode("utf-8"))
     m = bytes_to_long(hash.digest())
-
     signature = pow(m, privateKey["d"], privateKey["n"])
     return signature
 
 
 def rsa_verify(message, signature, publicKey):
     hash = SHA256.new(message.encode("utf-8"))
-    m = bytes_to_long(hash.digest())
+    m = hash.hexdigest()
 
-    verify = pow(signature, publicKey["e"], publicKey["n"])
+    verify = pow(int(signature), publicKey["e"], publicKey["n"])
+    verify = long_to_bytes(verify).decode("utf-8")
     return m == verify
 
 

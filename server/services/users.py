@@ -17,6 +17,23 @@ from schemas.users import (
 
 class Users:
     @staticmethod
+    async def get(user_id):
+        async with aiosqlite.connect(DB_PATH) as conn:
+            conn.row_factory = aiosqlite.Row
+            cursor = await conn.execute("SELECT * FROM UserInfo WHERE id = ?", (user_id, ))
+            row = await cursor.fetchone()
+            user = UserSchema(
+                id=str(user_id),
+                username=row["username"],
+                balance=row["balance"],
+                public_key_e=row["public_key_e"],
+                public_key_n=row["public_key_n"],
+                created_at=int(row["created_at"])
+            )
+            return user
+
+
+    @staticmethod
     async def gen_user_id():
         async with aiosqlite.connect(DB_PATH) as conn:
             async with conn.execute("SELECT MAX(id) FROM UserInfo") as cursor:

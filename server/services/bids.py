@@ -116,12 +116,12 @@ class Bid:
         return await Bid.get(data.id)
 
     @staticmethod
-    async def delete(bid: GetDeleteBidSchema) -> bool:
+    async def delete(bid) -> bool:
         async with aiosqlite.connect(DB_PATH) as db:
             await db.execute("PRAGMA foreign_keys = ON;")
 
             sql = "DELETE FROM Bids WHERE id = ?"
-            cursor = await db.execute(sql, (bid.id,))
+            cursor = await db.execute(sql, (bid,))
             await db.commit()
 
             return cursor.rowcount > 0
@@ -129,10 +129,11 @@ class Bid:
     @staticmethod
     async def get_highest(auction_id):
         async with aiosqlite.connect(DB_PATH) as db:
+            db.row_factory = aiosqlite.Row
             sql = "SELECT MAX(price) FROM Bids WHERE auction_id = ?"
             cursor = await db.execute(sql, (auction_id, ))
-            price = await cursor.fetchval()
-            return price
+            row = await cursor.fetchone()
+            return row[0]
         
     @staticmethod
     async def get_auction_bid_history(auction_id):

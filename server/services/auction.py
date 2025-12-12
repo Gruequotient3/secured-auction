@@ -183,12 +183,12 @@ class Auction:
 
             for row in rows:
                 if row["end_at"] >= int(datetime.utcnow().timestamp()):
-                    sql_update = "UPDATE Auctions SET status = ? WHERE auction_id = ?"
-                    await db.execute(sql_update, ("INACTIVE", row["auction_id"], ))
+                    sql_update = "UPDATE Auctions SET status = ? WHERE id = ?"
+                    await db.execute(sql_update, ("INACTIVE", row["id"], ))
                     await db.commit()
 
-                    sql_update = "SELECT * FROM Bids WHERE auction_id = ? ORDER BY price DESC LIMIT 1"
-                    cursor_update = await db.execute(sql_update, (row["auction_id"], ))
+                    sql_update = "SELECT * FROM Bids WHERE id = ? ORDER BY price DESC LIMIT 1"
+                    cursor_update = await db.execute(sql_update, (row["id"], ))
                     row_winner_bid = await cursor_update.fetchone()
 
                     if row_winner_bid == None:
