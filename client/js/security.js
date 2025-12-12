@@ -5,7 +5,6 @@ export function getPublicKey(){
         publicKey = JSON.parse(publicKey,
             (key, value, context) => {
                 if (key == "e" | key == "n"){
-                    console.log(context.source);
                     return BigInt(context.source);
                 }
                 return value;
