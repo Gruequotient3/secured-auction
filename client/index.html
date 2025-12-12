@@ -46,7 +46,7 @@
 <div class="auction-container">
 </div>
 <script type="module">
-    import {auctionListRequest, getToken, addBalanceRequest, getBalanceRequest, getServerKey} from './js/request.js'
+    import {auctionListRequest, updatePriceRequest, getToken, addBalanceRequest, getBalanceRequest, getServerKey} from './js/request.js'
     import {rsaVerify} from "./js/security.js"
     const indicator = document.querySelector('.nav-indicator');
     const items = document.querySelectorAll('.nav-item');
@@ -94,7 +94,6 @@
       }
       else{
         let json = JSON.parse(data.message)
-        console.log(json.balance);
         amount.innerHTML = json.balance + "€";
       }
     }
@@ -118,12 +117,30 @@
       }
       else{
         let json = JSON.parse(data.message);
-        json.forEach((el) => {
+        for (const el of json){
             let auction = new Auction(el.id, el.title, el.description, el.base_price, el.end_at, false)
+            let dataPrice = JSON.parse(
+                await updatePriceRequest(el.id),
+                (key, value, context) => {
+                    if (key == "signature"){
+                        return BigInt(context.source);
+                    }
+                    return value;
+                }
+            );
+            if (Object.hasOwn(dataPrice, "detail")){
+                console.log(`${dataPrice.detail.status} ${dataPrice.detail.code} : ${dataPrice.detail.message}`);
+                if (dataPrice.detail.code == 13 || dataPrice.detail.code == 14) window.location.href="login.html";
+            }
+            else if(rsaVerify(dataPrice.message, dataPrice.signature, getServerKey()) == false){
+                console.log("This request is not from the server");
+            }
+            else {
+                let jsonPrice = JSON.parse(dataPrice.message);
+                if (jsonPrice.updated_price != null) auction.price = jsonPrice.updated_price;
+            }
             auctions.set(auction, null);
-        })
-        console.log(auctions);
-
+        }
       }
     }
 

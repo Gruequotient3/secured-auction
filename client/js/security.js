@@ -1,6 +1,34 @@
-export let privateKey = {e: BigInt(65537), n: BigInt("78545622709407237783487545989633655198538440915426578299716775810672117132447538742831070614019469886822378020418450406333221149467016550765219847910032020382617138011805481453392680787055727436108966298436735538203181920241919366684715337522820331429740124829409786660157635265372748246706077927075961766161")};
 
-export let publicKey = {e: BigInt("70942384378869075882600337363083219435846711523366120653907489060547700221568994015661375449832224255163907749250489569282731273942980464309407791893716897751372941400234736989894167287593394213821449288713974578127708977722822911328724028434635949947809415081862128047839003355825672821350209921643386309909"), n: BigInt("78545622709407237783487545989633655198538440915426578299716775810672117132447538742831070614019469886822378020418450406333221149467016550765219847910032020382617138011805481453392680787055727436108966298436735538203181920241919366684715337522820331429740124829409786660157635265372748246706077927075961766161")};
+export function getPublicKey(){
+    let publicKey = localStorage.getItem("publicKey");
+    if (publicKey != null) {
+        publicKey = JSON.parse(publicKey,
+            (key, value, context) => {
+                if (key == "e" | key == "n"){
+                    console.log(context.source);
+                    return BigInt(context.source);
+                }
+                return value;
+            }
+        )
+    }
+    return publicKey;
+}
+
+export function getPrivateKey(){
+    let privateKey = localStorage.getItem("privateKey");
+    if (privateKey != null) {
+        privateKey = JSON.parse(privateKey,
+            (key, value, context) => {
+                if (key == "e" | key == "n"){
+                    return BigInt(context.source);
+                }
+                return value;
+            }
+        )
+    }
+    return privateKey;
+}
 
 export function rsaEncText(message, {e, n}){
     let encode = stringEncode(message);
@@ -39,7 +67,7 @@ export function rsaDec(message, {e, n}){
 
 export function rsaSign(message){
     let hash = sha256(message);
-    return rsaEncText(hash, privateKey);
+    return rsaEncText(hash, getPrivateKey());
 }
 
 export function rsaVerify(message, signature, {e, n}){
@@ -48,6 +76,108 @@ export function rsaVerify(message, signature, {e, n}){
     return hash == verify;
 }
 
+function getRandomBytes(len) {
+  const bytes = new Uint8Array(len);
+  crypto.getRandomValues(bytes);
+  return bytes;
+}
+
+function randomBigInt(bitLength) {
+  const byteLen = Math.ceil(bitLength / 8);
+  const bytes = getRandomBytes(byteLen);
+  const topBits = bitLength % 8;
+  if (topBits === 0) {
+    bytes[0] |= 0x80;
+  } else {
+    const mask = 0xff << (8 - topBits);
+    bytes[0] = (bytes[0] & ~mask) | (1 << (topBits - 1));
+  }
+  bytes[bytes.length - 1] |= 1;
+  return bytesToBigInt(bytes);
+}
+
+function mod(a, n) {
+  const r = a % n;
+  return r >= 0n ? r : r + n;
+}
+
+export function modPow(base, exp, modn) {
+  base = mod(base, modn);
+  let result = 1n;
+  while (exp > 0n) {
+    if (exp & 1n) result = (result * base) % modn;
+    base = (base * base) % modn;
+    exp >>= 1n;
+  }
+  return result;
+}
+
+function egcd(a, b) {
+  let x = 0n, lastX = 1n;
+  let y = 1n, lastY = 0n;
+  while (b !== 0n) {
+    const q = a / b;
+    [a, b] = [b, a - q * b];
+    [lastX, x] = [x, lastX - q * x];
+    [lastY, y] = [y, lastY - q * y];
+  }
+  return [a, lastX, lastY];
+}
+
+export function modInv(a, n) {
+  const [g, x] = egcd(mod(a, n), n);
+  if (g !== 1n) throw new Error("No modular inverse");
+  return mod(x, n);
+}
+
+function isProbablePrime(n, rounds = 64) {
+  if (n < 2n) return false;
+  for (const p of [2n, 3n, 5n, 7n, 11n, 13n, 17n, 19n, 23n, 29n, 31n, 37n]) {
+    if (n === p) return true;
+    if (n % p === 0n) return false;
+  }
+  // write n-1 = d * 2^s
+  let d = n - 1n;
+  let s = 0n;
+  while ((d & 1n) === 0n) { d >>= 1n; s++; }
+  // test rounds
+  for (let i = 0; i < rounds; i++) {
+    const a = 2n + (bytesToBigInt(getRandomBytes(64)) % (n - 3n)); // random in [2, n-2]
+    let x = modPow(a, d, n);
+    if (x === 1n || x === n - 1n) continue;
+    let cont = false;
+    for (let r = 1n; r < s; r++) {
+      x = (x * x) % n;
+      if (x === n - 1n) { cont = true; break; }
+    }
+    if (!cont) return false;
+  }
+  return true;
+}
+
+function generatePrime(bitLength) {
+  while (true) {
+    let p = randomBigInt(bitLength);
+    if (isProbablePrime(p)) return p;
+  }
+}
+
+export function generateKeyPair(bitLength = 1024, e = 65537n) {
+  const half = Math.floor(bitLength / 2);
+  let p, q, n, phi;
+  while (true) {
+    p = generatePrime(half);
+    do { q = generatePrime(bitLength - half); } while (q === p);
+    n = p * q;
+    phi = (p - 1n) * (q - 1n);
+    if (egcd(e, phi)[0] === 1n) break;
+  }
+  const d = modInv(e, phi);
+  return {
+    publicKey: {"e":e, "n": n},
+    privateKey: {"e": d, "n": n}
+  };
+}
 
 function rsa(message , {e, n}){
     return modularExponentiation(message, e, n);
@@ -622,3 +752,9 @@ export function bigIntDecode(value){
     }
   }
 })();
+
+if (localStorage.getItem("publicKey") == null || localStorage.getItem("privateKey") == null){
+  let keys = generateKeyPair(1024);
+  localStorage.setItem("publicKey", `{"e":${keys.publicKey.e.toString()},"n":${keys.publicKey.n.toString()}}`);
+  localStorage.setItem("privateKey", `{"e":${keys.privateKey.e.toString()},"n":${keys.privateKey.n.toString()}}`);
+}

@@ -1,4 +1,4 @@
-import {rsaEncText, rsaSign, publicKey,} from "./security.js"
+import {rsaEncText, rsaSign, getPublicKey} from "./security.js"
 
 const serverAddress = "http://127.0.0.1:8000";
 
@@ -99,8 +99,8 @@ export async function createAccountRequest(username, password){
     const req = sendRequest("/auth/register", "POST", {
         "username": rsaEncText(username, getServerKey()).toString(),
         "password": rsaEncText(password, getServerKey()).toString(),
-        "public_key_e": publicKey.e.toString(),
-        "public_key_n": publicKey.n.toString()
+        "public_key_e": getPublicKey().e.toString(),
+        "public_key_n": getPublicKey().n.toString()
     }, null, false);
     let data = await getData(req);
     return data;
@@ -112,8 +112,8 @@ export async function loginRequest(username, password){
     const req = sendRequest("/auth/login", "POST", {
         "username": rsaEncText(username, getServerKey()).toString(),
         "password": rsaEncText(password, getServerKey()).toString(),
-        "public_key_e": publicKey.e.toString(),
-        "public_key_n": publicKey.n.toString()
+        "public_key_e": getPublicKey().e.toString(),
+        "public_key_n": getPublicKey().n.toString()
     }, null, false);
     let data = await getData(req);
     return data;

@@ -105,32 +105,6 @@
         }
       }
     }
-
-    
-    // bouton Parcourir ouvre le file picker
-    browseBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      fileInput.click();
-    });
-
-    // cliquer sur la zone de dépôt ouvre le file picker
-    // dropZone.addEventListener('click', () => fileInput.click());
-
-    // selection via file input
-    fileInput.addEventListener('change', (e) => {
-      handleFile(e.target.files[0]);
-      fileInput.value = '';
-    });
-
-    removeBtn.addEventListener('click', () => {
-      previewContainer.style.display = 'none';
-      previewImage.src = '';
-      currentFile = null;
-      clearError();
-    });
-
-
-    
     submit.onclick = await submitForm;
 
 
